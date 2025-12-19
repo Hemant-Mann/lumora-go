@@ -77,6 +77,7 @@ func (c *contextImpl) Status(code int) {
 }
 
 func (c *contextImpl) JSON(code int, data interface{}) error {
+	// Set header BEFORE calling Status() (which calls WriteHeader())
 	c.SetHeader("Content-Type", "application/json")
 	c.Status(code)
 	encoder := json.NewEncoder(c.res)
@@ -84,6 +85,7 @@ func (c *contextImpl) JSON(code int, data interface{}) error {
 }
 
 func (c *contextImpl) String(code int, format string, values ...interface{}) error {
+	// Set header BEFORE calling Status() (which calls WriteHeader())
 	c.SetHeader("Content-Type", "text/plain")
 	c.Status(code)
 	_, err := fmt.Fprintf(c.res, format, values...)
@@ -121,7 +123,7 @@ func (c *contextImpl) Service(name string) (interface{}, error) {
 			}
 		}
 	}
-	
+
 	// Fall back to app-level services
 	if c.services == nil {
 		return nil, fmt.Errorf("services container not available")
@@ -138,7 +140,7 @@ func (c *contextImpl) MustService(name string) interface{} {
 			}
 		}
 	}
-	
+
 	// Fall back to app-level services
 	if c.services == nil {
 		panic("services container not available")
@@ -150,4 +152,3 @@ func (c *contextImpl) MustService(name string) interface{} {
 func (c *contextImpl) SetParams(params map[string]string) {
 	c.params = params
 }
-

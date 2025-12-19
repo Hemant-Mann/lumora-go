@@ -62,10 +62,10 @@ func (r *Response) WithBody(body interface{}) *Response {
 
 // Send sends the response through the context
 func (r *Response) Send(ctx Context) error {
-	// Set status code
-	ctx.Status(r.StatusCode)
+	// IMPORTANT: Set headers and cookies BEFORE calling Status()
+	// In net/http, once WriteHeader() is called, headers cannot be modified
 
-	// Set headers
+	// Set headers first
 	for name, value := range r.Headers {
 		ctx.SetHeader(name, value)
 	}
@@ -87,6 +87,7 @@ func (r *Response) Send(ctx Context) error {
 
 	// Handle body
 	if r.Body == nil {
+		ctx.Status(r.StatusCode)
 		return nil
 	}
 
@@ -96,6 +97,7 @@ func (r *Response) Send(ctx Context) error {
 		if _, exists := r.Headers["Content-Type"]; !exists {
 			ctx.SetHeader("Content-Type", "text/plain")
 		}
+		ctx.Status(r.StatusCode)
 		_, err := fmt.Fprint(ctx.Response(), bodyStr)
 		return err
 	}
@@ -105,6 +107,7 @@ func (r *Response) Send(ctx Context) error {
 	if _, exists := r.Headers["Content-Type"]; !exists {
 		ctx.SetHeader("Content-Type", "application/json")
 	}
+	ctx.Status(r.StatusCode)
 
 	encoder := json.NewEncoder(ctx.Response())
 	return encoder.Encode(r.Body)
