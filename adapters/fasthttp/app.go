@@ -23,8 +23,9 @@ func New() *App {
 		services:    services.NewContainer(),
 	}
 
+	// Wrap the router handler with our middleware handler
 	app.server = &fasthttp.Server{
-		Handler: app.handleRequest,
+		Handler: app.wrapHandler(app.router.Handler()),
 	}
 
 	return app
@@ -41,9 +42,27 @@ func (a *App) Handle(method, path string, handler core.Handler, middlewares ...c
 	// Apply middlewares to handler
 	finalHandler := core.Apply(handler, allMiddlewares...)
 
-	// Register with router
-	a.router.Handle(method, path, func(ctx core.Context) error {
-		return finalHandler(ctx)
+	// Register with router - create a fasthttp handler that converts context
+	a.router.Handle(method, path, func(ctx *fasthttp.RequestCtx) {
+		coreCtx := NewContext(ctx, a.services)
+
+		// Extract path parameters from UserValues (fasthttp/router stores them here)
+		if ctxImpl, ok := coreCtx.(*contextImpl); ok {
+			params := make(map[string]string)
+			ctx.VisitUserValues(func(key []byte, value interface{}) {
+				if str, ok := value.(string); ok {
+					params[string(key)] = str
+				}
+			})
+			ctxImpl.SetParams(params)
+		}
+
+		// Call our core handler - errors are handled by error middleware
+		if err := finalHandler(coreCtx); err != nil {
+			// If error middleware didn't handle it, send a default error response
+			// This should rarely happen if error middleware is properly configured
+			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+		}
 	})
 }
 
@@ -76,24 +95,12 @@ func (a *App) Start(addr string) error {
 	return a.server.ListenAndServe(addr)
 }
 
-func (a *App) handleRequest(ctx *fasthttp.RequestCtx) {
-	coreCtx := NewContext(ctx, a.services)
-
-	// Try to match route
-	handler, params := a.router.Match(string(ctx.Method()), string(ctx.Path()))
-	if handler == nil {
-		ctx.Error("Not Found", fasthttp.StatusNotFound)
-		return
-	}
-
-	// Set path parameters
-	if ctxImpl, ok := coreCtx.(*contextImpl); ok {
-		ctxImpl.SetParams(params)
-	}
-
-	// Execute handler
-	if err := handler(coreCtx); err != nil {
-		// Error handling will be done by error middleware if present
-		ctx.Error(err.Error(), fasthttp.StatusInternalServerError)
+// wrapHandler wraps the router handler to handle errors from our core handlers
+func (a *App) wrapHandler(routerHandler fasthttp.RequestHandler) fasthttp.RequestHandler {
+	return func(ctx *fasthttp.RequestCtx) {
+		// Call the router handler
+		// The router will call our registered handlers which return errors
+		// If an error is returned, it will be handled by error middleware
+		routerHandler(ctx)
 	}
 }

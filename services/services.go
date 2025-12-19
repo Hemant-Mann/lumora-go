@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 )
 
@@ -27,62 +26,22 @@ func (c *Container) Register(name string, service interface{}) {
 	c.services[name] = service
 }
 
-// RegisterByType registers a service by its type name
-func (c *Container) RegisterByType(service interface{}) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	
-	serviceType := reflect.TypeOf(service)
-	if serviceType.Kind() == reflect.Ptr {
-		serviceType = serviceType.Elem()
-	}
-	
-	c.services[serviceType.Name()] = service
-}
-
 // Get retrieves a service by name
 func (c *Container) Get(name string) (interface{}, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	service, exists := c.services[name]
 	if !exists {
 		return nil, fmt.Errorf("service '%s' not found", name)
 	}
-	
-	return service, nil
-}
 
-// GetByType retrieves a service by type
-func (c *Container) GetByType(serviceType interface{}) (interface{}, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	
-	t := reflect.TypeOf(serviceType)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	
-	service, exists := c.services[t.Name()]
-	if !exists {
-		return nil, fmt.Errorf("service of type '%s' not found", t.Name())
-	}
-	
 	return service, nil
 }
 
 // MustGet retrieves a service by name, panics if not found
 func (c *Container) MustGet(name string) interface{} {
 	service, err := c.Get(name)
-	if err != nil {
-		panic(err)
-	}
-	return service
-}
-
-// MustGetByType retrieves a service by type, panics if not found
-func (c *Container) MustGetByType(serviceType interface{}) interface{} {
-	service, err := c.GetByType(serviceType)
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +60,7 @@ func (c *Container) Has(name string) bool {
 func (c *Container) All() map[string]interface{} {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	result := make(map[string]interface{})
 	for k, v := range c.services {
 		result[k] = v
@@ -115,4 +74,3 @@ func (c *Container) Clear() {
 	defer c.mu.Unlock()
 	c.services = make(map[string]interface{})
 }
-
