@@ -71,6 +71,9 @@ func (a *App) Start(addr string) error {
 	a.mux.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
 		ctx := NewContext(req, res, a.services)
 		
+		// Set app-level services in context for UseServices middleware
+		ctx.Set("_app_services", a.services)
+		
 		// Try to match route
 		handler, params := a.router.Match(req.Method, req.URL.Path)
 		if handler == nil {

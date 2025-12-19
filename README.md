@@ -269,7 +269,11 @@ core.String(ctx, 200, "Hello, %s", name)
 
 ## Services (Dependency Injection)
 
-Services provide dependency injection capabilities:
+Services provide dependency injection capabilities, similar to Lumora JS. You can register services at the app level or per-route.
+
+### App-Level Services
+
+Services registered at the app level are available to all routes:
 
 ```go
 // Define a service
@@ -283,29 +287,76 @@ func NewUserService() *UserService {
 	}
 }
 
-// Register services
+// Register app-level services
 app.Services().Register("userService", NewUserService())
+```
 
-// Or register by type
-app.Services().RegisterByType(NewUserService())
+### Route-Specific Services (Like Lumora JS!)
 
-// Access services in handlers
-app.Get("/users/:id", func(ctx core.Context) error {
-	// Get service (returns error if not found)
-	userService, err := ctx.Service("userService")
-	if err != nil {
-		return core.NewError(500, "Service unavailable")
-	}
-	
-	// Type assert and use
-	us := userService.(*UserService)
-	// ... use the service
-	
-	// Or use MustService (panics if not found)
-	us := ctx.MustService("userService").(*UserService)
-	
-	return resp.Send(ctx)
-})
+You can compose routes with route-specific services using the `UseServices` middleware:
+
+```go
+import "github.com/hemant-mann/lumora-go/middleware/useservices"
+
+// Route with route-specific services
+app.Get("/users/:id",
+	func(ctx core.Context) error {
+		// Access route-specific service
+		userService := ctx.MustService("userService").(*UserService)
+		// ... use the service
+		return resp.Send(ctx)
+	},
+	useservices.UseServices(map[string]interface{}{
+		"userService": NewUserService(),
+	}),
+)
+
+// Multiple route-specific services
+app.Get("/protected/:id",
+	func(ctx core.Context) error {
+		userService := ctx.MustService("userService").(*UserService)
+		authService := ctx.MustService("authService").(*AuthService)
+		// ... use services
+		return resp.Send(ctx)
+	},
+	useservices.UseServices(map[string]interface{}{
+		"userService": NewUserService(),
+		"authService": NewAuthService(), // Overrides app-level service
+	}),
+)
+
+// Single service helper
+app.Post("/users",
+	func(ctx core.Context) error {
+		// ... handler code
+	},
+	useservices.UseService("userService", NewUserService()),
+)
+```
+
+### Service Resolution
+
+Services are resolved in the following order:
+1. **Route-specific services** (from `UseServices` middleware) - highest priority
+2. **App-level services** - fallback if route-specific not found
+
+This allows you to:
+- Override app-level services per route
+- Provide route-specific service instances
+- Compose routes with only the services they need (like Lumora JS!)
+
+### Accessing Services
+
+```go
+// Get service (returns error if not found)
+userService, err := ctx.Service("userService")
+if err != nil {
+	return core.NewError(500, "Service unavailable")
+}
+us := userService.(*UserService)
+
+// Or use MustService (panics if not found) - recommended
+us := ctx.MustService("userService").(*UserService)
 ```
 
 ## License

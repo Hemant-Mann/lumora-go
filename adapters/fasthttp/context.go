@@ -116,6 +116,16 @@ func (c *contextImpl) WithContext(ctx context.Context) core.Context {
 }
 
 func (c *contextImpl) Service(name string) (interface{}, error) {
+	// Check for scoped services first (route-specific)
+	if scopedContainer, ok := c.values["_scoped_services"]; ok {
+		if svcs, ok := scopedContainer.(*services.Container); ok {
+			if service, err := svcs.Get(name); err == nil {
+				return service, nil
+			}
+		}
+	}
+	
+	// Fall back to app-level services
 	if c.services == nil {
 		return nil, fmt.Errorf("services container not available")
 	}
@@ -123,6 +133,16 @@ func (c *contextImpl) Service(name string) (interface{}, error) {
 }
 
 func (c *contextImpl) MustService(name string) interface{} {
+	// Check for scoped services first (route-specific)
+	if scopedContainer, ok := c.values["_scoped_services"]; ok {
+		if svcs, ok := scopedContainer.(*services.Container); ok {
+			if svcs.Has(name) {
+				return svcs.MustGet(name)
+			}
+		}
+	}
+	
+	// Fall back to app-level services
 	if c.services == nil {
 		panic("services container not available")
 	}

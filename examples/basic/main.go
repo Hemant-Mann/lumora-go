@@ -6,9 +6,10 @@ import (
 	"github.com/hemant-mann/lumora-go/middleware/cors"
 	"github.com/hemant-mann/lumora-go/middleware/errorhandler"
 	"github.com/hemant-mann/lumora-go/middleware/logging"
+	"github.com/hemant-mann/lumora-go/middleware/useservices"
 )
 
-// Example service
+// Example services
 type UserService struct {
 	users map[string]string
 }
@@ -28,12 +29,28 @@ func (s *UserService) GetUser(id string) (string, bool) {
 	return name, ok
 }
 
+type AuthService struct {
+	tokens map[string]bool
+}
+
+func NewAuthService() *AuthService {
+	return &AuthService{
+		tokens: map[string]bool{
+			"token123": true,
+			"token456": true,
+		},
+	}
+}
+
+func (s *AuthService) ValidateToken(token string) bool {
+	return s.tokens[token]
+}
+
 func main() {
 	app := nethttp.New()
 
-	// Register services
-	userService := NewUserService()
-	app.Services().Register("userService", userService)
+	// Register app-level services (available to all routes)
+	app.Services().Register("authService", NewAuthService())
 
 	// Add global middleware
 	app.Use(
@@ -42,9 +59,8 @@ func main() {
 		errorhandler.Simple(),
 	)
 
-	// Define routes
+	// Define routes with route-specific services (like Lumora JS!)
 	app.Get("/", func(ctx core.Context) error {
-		// Using new Response system - user controls the structure
 		resp := core.NewResponse().
 			WithStatus(200).
 			WithBody(map[string]interface{}{
@@ -54,56 +70,100 @@ func main() {
 		return resp.Send(ctx)
 	})
 
-	app.Get("/users/:id", func(ctx core.Context) error {
-		id := ctx.Param("id")
+	// Route with route-specific services - similar to Lumora JS useServices
+	app.Get("/users/:id",
+		func(ctx core.Context) error {
+			id := ctx.Param("id")
 
-		// Access service from context
-		userService, err := ctx.Service("userService")
-		if err != nil {
-			return core.NewError(500, "Service not available")
-		}
+			// Access route-specific service
+			userService := ctx.MustService("userService").(*UserService)
+			name, exists := userService.GetUser(id)
 
-		// Type assert to use the service
-		us := userService.(*UserService)
-		name, exists := us.GetUser(id)
+			if !exists {
+				resp := core.NewResponse().
+					WithStatus(404).
+					WithBody(map[string]string{"error": "User not found"})
+				return resp.Send(ctx)
+			}
 
-		if !exists {
 			resp := core.NewResponse().
-				WithStatus(404).
-				WithBody(map[string]string{"error": "User not found"})
+				WithStatus(200).
+				WithBody(map[string]interface{}{
+					"id":   id,
+					"name": name,
+				})
 			return resp.Send(ctx)
-		}
+		},
+		useservices.UseServices(map[string]interface{}{
+			"userService": NewUserService(),
+		}),
+	)
 
-		resp := core.NewResponse().
-			WithStatus(200).
-			WithBody(map[string]interface{}{
-				"id":   id,
-				"name": name,
-			})
-		return resp.Send(ctx)
-	})
+	// Route with multiple route-specific services
+	app.Get("/protected/:id",
+		func(ctx core.Context) error {
+			// Access route-specific services
+			userService := ctx.MustService("userService").(*UserService)
+			authService := ctx.MustService("authService").(*AuthService)
 
-	app.Post("/users", func(ctx core.Context) error {
-		var user struct {
-			Name  string `json:"name"`
-			Email string `json:"email"`
-		}
+			// Check auth token
+			token := ctx.Header("Authorization")
+			if !authService.ValidateToken(token) {
+				resp := core.NewResponse().
+					WithStatus(401).
+					WithBody(map[string]string{"error": "Unauthorized"})
+				return resp.Send(ctx)
+			}
 
-		if err := ctx.BindJSON(&user); err != nil {
+			id := ctx.Param("id")
+			name, exists := userService.GetUser(id)
+			if !exists {
+				resp := core.NewResponse().
+					WithStatus(404).
+					WithBody(map[string]string{"error": "User not found"})
+				return resp.Send(ctx)
+			}
+
 			resp := core.NewResponse().
-				WithStatus(400).
-				WithBody(map[string]string{"error": "Invalid JSON"})
+				WithStatus(200).
+				WithBody(map[string]interface{}{
+					"id":   id,
+					"name": name,
+					"auth": "validated",
+				})
 			return resp.Send(ctx)
-		}
+		},
+		useservices.UseServices(map[string]interface{}{
+			"userService": NewUserService(),
+			"authService": NewAuthService(), // Overrides app-level authService for this route
+		}),
+	)
 
-		resp := core.NewResponse().
-			WithStatus(201).
-			WithBody(map[string]interface{}{
-				"message": "User created",
-				"user":    user,
-			})
-		return resp.Send(ctx)
-	})
+	// Using UseService helper for single service
+	app.Post("/users",
+		func(ctx core.Context) error {
+			var user struct {
+				Name  string `json:"name"`
+				Email string `json:"email"`
+			}
+
+			if err := ctx.BindJSON(&user); err != nil {
+				resp := core.NewResponse().
+					WithStatus(400).
+					WithBody(map[string]string{"error": "Invalid JSON"})
+				return resp.Send(ctx)
+			}
+
+			resp := core.NewResponse().
+				WithStatus(201).
+				WithBody(map[string]interface{}{
+					"message": "User created",
+					"user":    user,
+				})
+			return resp.Send(ctx)
+		},
+		useservices.UseService("userService", NewUserService()),
+	)
 
 	// Example with plain text response
 	app.Get("/text", func(ctx core.Context) error {

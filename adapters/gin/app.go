@@ -35,6 +35,8 @@ func (a *App) Handle(method, path string, handler core.Handler, middlewares ...c
 		// Convert to gin handler
 		ginHandler := func(ginCtx *gin.Context) {
 			ctx := NewContext(ginCtx, a.services)
+			// Set app-level services in context for UseServices middleware
+			ctx.Set("_app_services", a.services)
 			if err := finalHandler(ctx); err != nil {
 				// Error will be handled by error middleware if present
 				ginCtx.Error(err)
