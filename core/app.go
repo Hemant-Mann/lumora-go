@@ -1,5 +1,7 @@
 package core
 
+import "github.com/hemant-mann/lumora-go/services"
+
 // App represents the main application interface
 type App interface {
 	// Use adds middleware to the application
@@ -25,5 +27,8 @@ type App interface {
 	
 	// Start starts the server
 	Start(addr string) error
+	
+	// Services returns the service container
+	Services() *services.Container
 }
 

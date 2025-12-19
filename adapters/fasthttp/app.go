@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hemant-mann/lumora-go/core"
+	"github.com/hemant-mann/lumora-go/services"
 	"github.com/valyala/fasthttp"
 )
 
@@ -11,6 +12,7 @@ type App struct {
 	server      *fasthttp.Server
 	middlewares []core.Middleware
 	router      *Router
+	services    *services.Container
 }
 
 // New creates a new fasthttp adapter app
@@ -18,6 +20,7 @@ func New() *App {
 	app := &App{
 		middlewares: []core.Middleware{},
 		router:      NewRouter(),
+		services:    services.NewContainer(),
 	}
 
 	app.server = &fasthttp.Server{
@@ -64,13 +67,17 @@ func (a *App) Patch(path string, handler core.Handler, middlewares ...core.Middl
 	a.Handle("PATCH", path, handler, middlewares...)
 }
 
+func (a *App) Services() *services.Container {
+	return a.services
+}
+
 func (a *App) Start(addr string) error {
 	fmt.Printf("Server starting on %s\n", addr)
 	return a.server.ListenAndServe(addr)
 }
 
 func (a *App) handleRequest(ctx *fasthttp.RequestCtx) {
-	coreCtx := NewContext(ctx)
+	coreCtx := NewContext(ctx, a.services)
 
 	// Try to match route
 	handler, params := a.router.Match(string(ctx.Method()), string(ctx.Path()))

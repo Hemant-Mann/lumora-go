@@ -9,23 +9,26 @@ import (
 	"net/url"
 
 	"github.com/hemant-mann/lumora-go/core"
+	"github.com/hemant-mann/lumora-go/services"
 	"github.com/valyala/fasthttp"
 )
 
 type contextImpl struct {
-	ctx    *fasthttp.RequestCtx
-	params map[string]string
-	values map[string]interface{}
-	reqCtx context.Context
+	ctx      *fasthttp.RequestCtx
+	params   map[string]string
+	values   map[string]interface{}
+	reqCtx   context.Context
+	services *services.Container
 }
 
 // NewContext creates a new context from fasthttp.RequestCtx
-func NewContext(ctx *fasthttp.RequestCtx) core.Context {
+func NewContext(ctx *fasthttp.RequestCtx, svcs *services.Container) core.Context {
 	return &contextImpl{
-		ctx:    ctx,
-		params: make(map[string]string),
-		values: make(map[string]interface{}),
-		reqCtx: context.Background(),
+		ctx:      ctx,
+		params:   make(map[string]string),
+		values:   make(map[string]interface{}),
+		reqCtx:   context.Background(),
+		services: svcs,
 	}
 }
 
@@ -103,12 +106,27 @@ func (c *contextImpl) Context() context.Context {
 
 func (c *contextImpl) WithContext(ctx context.Context) core.Context {
 	newCtx := &contextImpl{
-		ctx:    c.ctx,
-		params: c.params,
-		values: c.values,
-		reqCtx: ctx,
+		ctx:      c.ctx,
+		params:   c.params,
+		values:   c.values,
+		reqCtx:   ctx,
+		services: c.services,
 	}
 	return newCtx
+}
+
+func (c *contextImpl) Service(name string) (interface{}, error) {
+	if c.services == nil {
+		return nil, fmt.Errorf("services container not available")
+	}
+	return c.services.Get(name)
+}
+
+func (c *contextImpl) MustService(name string) interface{} {
+	if c.services == nil {
+		panic("services container not available")
+	}
+	return c.services.MustGet(name)
 }
 
 // SetParams sets the path parameters (used by router)

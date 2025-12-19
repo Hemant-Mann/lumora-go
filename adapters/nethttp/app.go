@@ -5,20 +5,23 @@ import (
 	"net/http"
 
 	"github.com/hemant-mann/lumora-go/core"
+	"github.com/hemant-mann/lumora-go/services"
 )
 
 type App struct {
-	mux        *http.ServeMux
+	mux         *http.ServeMux
 	middlewares []core.Middleware
-	router     *Router
+	router      *Router
+	services    *services.Container
 }
 
 // New creates a new net/http adapter app
 func New() *App {
 	return &App{
-		mux:        http.NewServeMux(),
+		mux:         http.NewServeMux(),
 		middlewares: []core.Middleware{},
-		router:     NewRouter(),
+		router:      NewRouter(),
+		services:    services.NewContainer(),
 	}
 }
 
@@ -59,10 +62,14 @@ func (a *App) Patch(path string, handler core.Handler, middlewares ...core.Middl
 	a.Handle(http.MethodPatch, path, handler, middlewares...)
 }
 
+func (a *App) Services() *services.Container {
+	return a.services
+}
+
 func (a *App) Start(addr string) error {
 	// Register router handler with mux
 	a.mux.HandleFunc("/", func(res http.ResponseWriter, req *http.Request) {
-		ctx := NewContext(req, res)
+		ctx := NewContext(req, res, a.services)
 		
 		// Try to match route
 		handler, params := a.router.Match(req.Method, req.URL.Path)

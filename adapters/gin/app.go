@@ -3,18 +3,21 @@ package gin
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/hemant-mann/lumora-go/core"
+	"github.com/hemant-mann/lumora-go/services"
 )
 
 type App struct {
-	engine     *gin.Engine
+	engine      *gin.Engine
 	middlewares []core.Middleware
+	services    *services.Container
 }
 
 // New creates a new gin adapter app
 func New() *App {
 	return &App{
-		engine:     gin.New(),
+		engine:      gin.New(),
 		middlewares: []core.Middleware{},
+		services:    services.NewContainer(),
 	}
 }
 
@@ -29,14 +32,14 @@ func (a *App) Handle(method, path string, handler core.Handler, middlewares ...c
 	// Apply middlewares to handler
 	finalHandler := core.Apply(handler, allMiddlewares...)
 	
-	// Convert to gin handler
-	ginHandler := func(ginCtx *gin.Context) {
-		ctx := NewContext(ginCtx)
-		if err := finalHandler(ctx); err != nil {
-			// Error will be handled by error middleware if present
-			ginCtx.Error(err)
+		// Convert to gin handler
+		ginHandler := func(ginCtx *gin.Context) {
+			ctx := NewContext(ginCtx, a.services)
+			if err := finalHandler(ctx); err != nil {
+				// Error will be handled by error middleware if present
+				ginCtx.Error(err)
+			}
 		}
-	}
 	
 	// Register with gin
 	switch method {
@@ -73,6 +76,10 @@ func (a *App) Delete(path string, handler core.Handler, middlewares ...core.Midd
 
 func (a *App) Patch(path string, handler core.Handler, middlewares ...core.Middleware) {
 	a.Handle("PATCH", path, handler, middlewares...)
+}
+
+func (a *App) Services() *services.Container {
+	return a.services
 }
 
 func (a *App) Start(addr string) error {

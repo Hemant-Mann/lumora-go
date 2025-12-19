@@ -2,19 +2,22 @@ package gin
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hemant-mann/lumora-go/core"
+	"github.com/hemant-mann/lumora-go/services"
 )
 
 type contextImpl struct {
-	ctx *gin.Context
+	ctx      *gin.Context
+	services *services.Container
 }
 
 // NewContext creates a new context from gin.Context
-func NewContext(ctx *gin.Context) core.Context {
-	return &contextImpl{ctx: ctx}
+func NewContext(ctx *gin.Context, svcs *services.Container) core.Context {
+	return &contextImpl{ctx: ctx, services: svcs}
 }
 
 func (c *contextImpl) Request() *http.Request {
@@ -75,6 +78,20 @@ func (c *contextImpl) Context() context.Context {
 func (c *contextImpl) WithContext(ctx context.Context) core.Context {
 	newGinCtx := c.ctx.Copy()
 	newGinCtx.Request = newGinCtx.Request.WithContext(ctx)
-	return &contextImpl{ctx: newGinCtx}
+	return &contextImpl{ctx: newGinCtx, services: c.services}
+}
+
+func (c *contextImpl) Service(name string) (interface{}, error) {
+	if c.services == nil {
+		return nil, fmt.Errorf("services container not available")
+	}
+	return c.services.Get(name)
+}
+
+func (c *contextImpl) MustService(name string) interface{} {
+	if c.services == nil {
+		panic("services container not available")
+	}
+	return c.services.MustGet(name)
 }
 

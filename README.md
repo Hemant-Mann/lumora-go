@@ -48,18 +48,31 @@ func main() {
 		errorhandler.Simple(),
 	)
 	
+	// Register services
+	app.Services().Register("userService", NewUserService())
+	
 	// Define routes
 	app.Get("/", func(ctx core.Context) error {
-		return core.SuccessResponse(ctx, map[string]string{
-			"message": "Hello, World!",
-		})
+		resp := core.NewResponse().
+			WithStatus(200).
+			WithBody(map[string]string{
+				"message": "Hello, World!",
+			})
+		return resp.Send(ctx)
 	})
 	
 	app.Get("/users/:id", func(ctx core.Context) error {
 		id := ctx.Param("id")
-		return core.SuccessResponse(ctx, map[string]string{
-			"id": id,
-		})
+		
+		// Access service
+		userService := ctx.MustService("userService").(*UserService)
+		
+		resp := core.NewResponse().
+			WithStatus(200).
+			WithBody(map[string]string{
+				"id": id,
+			})
+		return resp.Send(ctx)
 	})
 	
 	app.Start(":8080")
@@ -89,9 +102,12 @@ func main() {
 	)
 	
 	app.Get("/", func(ctx core.Context) error {
-		return core.SuccessResponse(ctx, map[string]string{
-			"message": "Hello from Gin!",
-		})
+		resp := core.NewResponse().
+			WithStatus(200).
+			WithBody(map[string]string{
+				"message": "Hello from Gin!",
+			})
+		return resp.Send(ctx)
 	})
 	
 	app.Start(":8080")
@@ -121,9 +137,12 @@ func main() {
 	)
 	
 	app.Get("/", func(ctx core.Context) error {
-		return core.SuccessResponse(ctx, map[string]string{
-			"message": "Hello from FastHTTP!",
-		})
+		resp := core.NewResponse().
+			WithStatus(200).
+			WithBody(map[string]string{
+				"message": "Hello from FastHTTP!",
+			})
+		return resp.Send(ctx)
 	})
 	
 	app.Start(":8080")
@@ -196,17 +215,97 @@ if someCondition {
 }
 ```
 
-## Response Helpers
+## Response System
+
+The response system gives you full control over your response structure:
 
 ```go
-// Success response
-core.SuccessResponse(ctx, data)
+// Create a response with full control
+resp := core.NewResponse().
+	WithStatus(200).
+	WithHeader("X-Custom-Header", "value").
+	WithCookie(core.Cookie{
+		Name:     "session",
+		Value:    "abc123",
+		HttpOnly: true,
+		MaxAge:   3600,
+	}).
+	WithBody(map[string]interface{}{
+		"message": "Success",
+		"data":    yourData,
+	})
+return resp.Send(ctx)
+```
 
-// Error response
-core.ErrorResponse(ctx, 400, "Bad Request")
+### Automatic Content-Type Detection
 
-// Custom JSON response
-core.JSONResponse(ctx, 201, customData)
+- If `Body` is a `string`, it's sent as `text/plain`
+- Otherwise, it's sent as `application/json`
+
+```go
+// Plain text response
+resp := core.NewResponse().
+	WithStatus(200).
+	WithBody("This is plain text")
+
+// JSON response (automatic)
+resp := core.NewResponse().
+	WithStatus(200).
+	WithBody(map[string]string{"key": "value"})
+```
+
+### Helper Functions
+
+```go
+// Quick JSON response
+core.JSON(ctx, 200, data)
+
+// Quick text response
+core.Text(ctx, 200, "Hello")
+
+// Formatted string response
+core.String(ctx, 200, "Hello, %s", name)
+```
+
+## Services (Dependency Injection)
+
+Services provide dependency injection capabilities:
+
+```go
+// Define a service
+type UserService struct {
+	users map[string]string
+}
+
+func NewUserService() *UserService {
+	return &UserService{
+		users: make(map[string]string),
+	}
+}
+
+// Register services
+app.Services().Register("userService", NewUserService())
+
+// Or register by type
+app.Services().RegisterByType(NewUserService())
+
+// Access services in handlers
+app.Get("/users/:id", func(ctx core.Context) error {
+	// Get service (returns error if not found)
+	userService, err := ctx.Service("userService")
+	if err != nil {
+		return core.NewError(500, "Service unavailable")
+	}
+	
+	// Type assert and use
+	us := userService.(*UserService)
+	// ... use the service
+	
+	// Or use MustService (panics if not found)
+	us := ctx.MustService("userService").(*UserService)
+	
+	return resp.Send(ctx)
+})
 ```
 
 ## License

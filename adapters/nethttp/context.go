@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/hemant-mann/lumora-go/core"
+	"github.com/hemant-mann/lumora-go/services"
 )
 
 type contextImpl struct {
@@ -16,10 +17,11 @@ type contextImpl struct {
 	queryCache map[string]string
 	values     map[string]interface{}
 	statusCode int
+	services   *services.Container
 }
 
 // NewContext creates a new context from http.Request and http.ResponseWriter
-func NewContext(req *http.Request, res http.ResponseWriter) core.Context {
+func NewContext(req *http.Request, res http.ResponseWriter, svcs *services.Container) core.Context {
 	return &contextImpl{
 		req:        req,
 		res:        res,
@@ -27,6 +29,7 @@ func NewContext(req *http.Request, res http.ResponseWriter) core.Context {
 		queryCache: make(map[string]string),
 		values:     make(map[string]interface{}),
 		statusCode: 200,
+		services:   svcs,
 	}
 }
 
@@ -105,7 +108,22 @@ func (c *contextImpl) WithContext(ctx context.Context) core.Context {
 		queryCache: c.queryCache,
 		values:     c.values,
 		statusCode: c.statusCode,
+		services:   c.services,
 	}
+}
+
+func (c *contextImpl) Service(name string) (interface{}, error) {
+	if c.services == nil {
+		return nil, fmt.Errorf("services container not available")
+	}
+	return c.services.Get(name)
+}
+
+func (c *contextImpl) MustService(name string) interface{} {
+	if c.services == nil {
+		panic("services container not available")
+	}
+	return c.services.MustGet(name)
 }
 
 // SetParams sets the path parameters (used by router)

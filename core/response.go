@@ -3,70 +3,140 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
-// Response represents a standardized response structure
+// Cookie represents an HTTP cookie
+type Cookie struct {
+	Name     string
+	Value    string
+	Path     string
+	Domain   string
+	MaxAge   int
+	Secure   bool
+	HttpOnly bool
+	SameSite http.SameSite
+}
+
+// Response represents a flexible response structure
 type Response struct {
-	Code    int         `json:"code,omitempty"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
+	StatusCode int
+	Headers    map[string]string
+	Cookies    []Cookie
+	Body       interface{}
 }
 
-// Success creates a success response
-func Success(data interface{}) *Response {
+// NewResponse creates a new response with default values
+func NewResponse() *Response {
 	return &Response{
-		Code: 200,
-		Data: data,
+		StatusCode: 200,
+		Headers:    make(map[string]string),
+		Cookies:    []Cookie{},
+		Body:       nil,
 	}
 }
 
-// SuccessWithMessage creates a success response with a message
-func SuccessWithMessage(message string, data interface{}) *Response {
-	return &Response{
-		Code:    200,
-		Message: message,
-		Data:    data,
-	}
+// WithStatus sets the status code
+func (r *Response) WithStatus(code int) *Response {
+	r.StatusCode = code
+	return r
 }
 
-// ErrorResponse creates an error response struct
-func ErrorResponse(code int, message string) *Response {
-	return &Response{
-		Code:  code,
-		Error: message,
-	}
+// WithHeader sets a header
+func (r *Response) WithHeader(name, value string) *Response {
+	r.Headers[name] = value
+	return r
 }
 
-// JSONResponse sends a JSON response through the context
-func JSONResponse(ctx Context, code int, data interface{}) error {
-	ctx.SetHeader("Content-Type", "application/json")
-	ctx.Status(code)
-	
+// WithCookie adds a cookie
+func (r *Response) WithCookie(cookie Cookie) *Response {
+	r.Cookies = append(r.Cookies, cookie)
+	return r
+}
+
+// WithBody sets the response body
+func (r *Response) WithBody(body interface{}) *Response {
+	r.Body = body
+	return r
+}
+
+// Send sends the response through the context
+func (r *Response) Send(ctx Context) error {
+	// Set status code
+	ctx.Status(r.StatusCode)
+
+	// Set headers
+	for name, value := range r.Headers {
+		ctx.SetHeader(name, value)
+	}
+
+	// Set cookies
+	for _, cookie := range r.Cookies {
+		httpCookie := &http.Cookie{
+			Name:     cookie.Name,
+			Value:    cookie.Value,
+			Path:     cookie.Path,
+			Domain:   cookie.Domain,
+			MaxAge:   cookie.MaxAge,
+			Secure:   cookie.Secure,
+			HttpOnly: cookie.HttpOnly,
+			SameSite: cookie.SameSite,
+		}
+		http.SetCookie(ctx.Response(), httpCookie)
+	}
+
+	// Handle body
+	if r.Body == nil {
+		return nil
+	}
+
+	// Check if body is a string - send as plain text
+	if bodyStr, ok := r.Body.(string); ok {
+		// Set content type if not already set
+		if _, exists := r.Headers["Content-Type"]; !exists {
+			ctx.SetHeader("Content-Type", "text/plain")
+		}
+		_, err := fmt.Fprint(ctx.Response(), bodyStr)
+		return err
+	}
+
+	// Otherwise, send as JSON
+	// Set content type if not already set
+	if _, exists := r.Headers["Content-Type"]; !exists {
+		ctx.SetHeader("Content-Type", "application/json")
+	}
+
 	encoder := json.NewEncoder(ctx.Response())
-	return encoder.Encode(data)
+	return encoder.Encode(r.Body)
 }
 
-// SuccessResponse sends a success response
-func SuccessResponse(ctx Context, data interface{}) error {
-	return JSONResponse(ctx, 200, Success(data))
-}
-
-// SendErrorResponse sends an error response
-func SendErrorResponse(ctx Context, code int, message string) error {
-	return JSONResponse(ctx, code, ErrorResponse(code, message))
-}
-
-// SendResponse sends a response using the Response struct
+// SendResponse is a helper to send a Response struct
 func SendResponse(ctx Context, resp *Response) error {
-	return JSONResponse(ctx, resp.Code, resp)
+	return resp.Send(ctx)
 }
 
-// StringResponse sends a string response
-func StringResponse(ctx Context, code int, format string, values ...interface{}) error {
-	ctx.SetHeader("Content-Type", "text/plain")
-	ctx.Status(code)
-	_, err := fmt.Fprintf(ctx.Response(), format, values...)
-	return err
+// Helper functions for common response patterns
+
+// JSON sends a JSON response
+func JSON(ctx Context, code int, data interface{}) error {
+	resp := NewResponse().
+		WithStatus(code).
+		WithHeader("Content-Type", "application/json").
+		WithBody(data)
+	return resp.Send(ctx)
 }
 
+// Text sends a plain text response
+func Text(ctx Context, code int, text string) error {
+	resp := NewResponse().
+		WithStatus(code).
+		WithHeader("Content-Type", "text/plain").
+		WithBody(text)
+	return resp.Send(ctx)
+}
+
+// String sends a formatted string response (for backward compatibility)
+func String(ctx Context, code int, format string, values ...interface{}) error {
+	text := fmt.Sprintf(format, values...)
+	return Text(ctx, code, text)
+}

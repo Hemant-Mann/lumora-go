@@ -43,12 +43,18 @@ func New(options *Options) core.Middleware {
 func defaultErrorHandler(ctx core.Context, err error) error {
 	// Check if it's an HTTP error
 	if httpErr := core.GetHTTPError(err); httpErr != nil {
-		// Send error response
-		return core.SendErrorResponse(ctx, httpErr.Code, httpErr.Message)
+		// Send error response using new Response system
+		resp := core.NewResponse().
+			WithStatus(httpErr.Code).
+			WithBody(map[string]string{"error": httpErr.Message})
+		return resp.Send(ctx)
 	}
 	
 	// Default to 500 Internal Server Error
-	return core.SendErrorResponse(ctx, 500, "Internal Server Error")
+	resp := core.NewResponse().
+		WithStatus(500).
+		WithBody(map[string]string{"error": "Internal Server Error"})
+	return resp.Send(ctx)
 }
 
 // Simple creates a simple error handler middleware with default options
