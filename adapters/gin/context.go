@@ -90,7 +90,7 @@ func (c *contextImpl) Service(name string) (interface{}, error) {
 			}
 		}
 	}
-	
+
 	// Fall back to app-level services
 	if c.services == nil {
 		return nil, fmt.Errorf("services container not available")
@@ -107,7 +107,7 @@ func (c *contextImpl) MustService(name string) interface{} {
 			}
 		}
 	}
-	
+
 	// Fall back to app-level services
 	if c.services == nil {
 		panic("services container not available")
@@ -115,3 +115,7 @@ func (c *contextImpl) MustService(name string) interface{} {
 	return c.services.MustGet(name)
 }
 
+func (c *contextImpl) RequestBody() ([]byte, error) {
+	// Gin provides GetRawData() method which returns ([]byte, error)
+	return c.ctx.GetRawData()
+}

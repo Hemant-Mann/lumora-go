@@ -2,7 +2,6 @@ package usejsonbody
 
 import (
 	"bytes"
-	"io"
 
 	z "github.com/Oudwins/zog"
 	"github.com/Oudwins/zog/parsers/zjson"
@@ -22,14 +21,11 @@ type SchemaWithParse interface {
 func UseJsonBody(schema SchemaWithParse, dest interface{}) core.Middleware {
 	return func(next core.Handler) core.Handler {
 		return func(ctx core.Context) error {
-			req := ctx.Request()
-
-			// Read request body
-			body, err := io.ReadAll(req.Body)
+			// Use RequestBody() method which works across all adapters
+			body, err := ctx.RequestBody()
 			if err != nil {
 				return core.NewError(400, "Failed to read request body")
 			}
-			defer req.Body.Close()
 
 			if len(body) == 0 {
 				return core.NewError(400, "Request body is empty")
@@ -54,14 +50,15 @@ func UseJsonBody(schema SchemaWithParse, dest interface{}) core.Middleware {
 func UseJsonBodyWithKey(schema SchemaWithParse, dest interface{}, key string) core.Middleware {
 	return func(next core.Handler) core.Handler {
 		return func(ctx core.Context) error {
-			req := ctx.Request()
-
-			// Read request body
-			body, err := io.ReadAll(req.Body)
+			// Use RequestBody() method which works across all adapters
+			body, err := ctx.RequestBody()
 			if err != nil {
 				return core.NewError(400, "Failed to read request body")
 			}
-			defer req.Body.Close()
+
+			if len(body) == 0 {
+				return core.NewError(400, "Request body is empty")
+			}
 
 			// Decode and validate JSON using zjson
 			issues := schema.Parse(zjson.Decode(bytes.NewReader(body)), dest)

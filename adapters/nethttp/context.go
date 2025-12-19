@@ -1,9 +1,11 @@
 package nethttp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/hemant-mann/lumora-go/core"
@@ -151,4 +153,15 @@ func (c *contextImpl) MustService(name string) interface{} {
 // SetParams sets the path parameters (used by router)
 func (c *contextImpl) SetParams(params map[string]string) {
 	c.params = params
+}
+
+func (c *contextImpl) RequestBody() ([]byte, error) {
+	// Read the request body
+	body, err := io.ReadAll(c.req.Body)
+	if err != nil {
+		return nil, err
+	}
+	// Restore the body so it can be read again if needed
+	c.req.Body = io.NopCloser(bytes.NewReader(body))
+	return body, nil
 }

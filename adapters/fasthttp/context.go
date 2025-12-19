@@ -124,7 +124,7 @@ func (c *contextImpl) Service(name string) (interface{}, error) {
 			}
 		}
 	}
-	
+
 	// Fall back to app-level services
 	if c.services == nil {
 		return nil, fmt.Errorf("services container not available")
@@ -141,7 +141,7 @@ func (c *contextImpl) MustService(name string) interface{} {
 			}
 		}
 	}
-	
+
 	// Fall back to app-level services
 	if c.services == nil {
 		panic("services container not available")
@@ -152,6 +152,11 @@ func (c *contextImpl) MustService(name string) interface{} {
 // SetParams sets the path parameters (used by router)
 func (c *contextImpl) SetParams(params map[string]string) {
 	c.params = params
+}
+
+func (c *contextImpl) RequestBody() ([]byte, error) {
+	// In fasthttp, PostBody() returns the body as bytes
+	return c.ctx.PostBody(), nil
 }
 
 // responseWriter wraps fasthttp.RequestCtx to implement http.ResponseWriter

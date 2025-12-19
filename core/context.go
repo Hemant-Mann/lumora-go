@@ -54,4 +54,7 @@ type Context interface {
 
 	// MustService retrieves a service from the service container, panics if not found
 	MustService(name string) interface{}
+
+	// RequestBody returns the raw request body as bytes
+	RequestBody() ([]byte, error)
 }
