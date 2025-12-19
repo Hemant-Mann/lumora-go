@@ -5,6 +5,7 @@ go 1.24.0
 toolchain go1.24.11
 
 require (
+	github.com/Oudwins/zog v0.22.0
 	github.com/fasthttp/router v1.5.4
 	github.com/gin-gonic/gin v1.11.0
 	github.com/valyala/fasthttp v1.68.0
@@ -39,6 +40,7 @@ require (
 	go.uber.org/mock v0.5.0 // indirect
 	golang.org/x/arch v0.20.0 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
+	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect

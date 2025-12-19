@@ -359,6 +359,61 @@ us := userService.(*UserService)
 us := ctx.MustService("userService").(*UserService)
 ```
 
+## JSON Body Parsing (useJsonBody)
+
+Similar to Lumora JS's `useJsonBody` hook, you can parse and validate JSON request bodies using the `zog` library:
+
+```go
+import (
+    z "github.com/Oudwins/zog"
+    "github.com/hemant-mann/lumora-go/middleware/usejsonbody"
+)
+
+// Define your schema using zog
+var userSchema = z.Struct(z.Shape{
+    "name":  z.String().Min(3).Max(50),
+    "email": z.String().Email(),
+    "age":   z.Int().GT(0).LT(150).Optional(),
+})
+
+// Define your struct
+type User struct {
+    Name  string `json:"name"`
+    Email string `json:"email"`
+    Age   *int   `json:"age,omitempty"`
+}
+
+// Use in route
+app.Post("/users",
+    func(ctx core.Context) error {
+        // Get parsed and validated body
+        user := usejsonbody.GetJsonBody(ctx).(*User)
+        
+        // Use validated user data
+        resp := core.NewResponse().
+            WithStatus(201).
+            WithBody(map[string]interface{}{
+                "message": "User created",
+                "user":    user,
+            })
+        return resp.Send(ctx)
+    },
+    usejsonbody.UseJsonBody(userSchema, &User{}),
+)
+
+// With custom key
+app.Post("/users",
+    handler,
+    usejsonbody.UseJsonBodyWithKey(userSchema, &User{}, "user"),
+)
+```
+
+The middleware:
+- Parses JSON from request body
+- Validates against zog schema
+- Returns 400 error if validation fails
+- Stores validated data in context for handler access
+
 ## License
 
 MIT

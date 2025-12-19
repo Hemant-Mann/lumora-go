@@ -165,6 +165,37 @@ func main() {
 		useservices.UseService("userService", NewUserService()),
 	)
 
+	// Example with useJsonBody middleware (similar to Lumora JS)
+	// Note: This requires importing zog and usejsonbody packages
+	// Uncomment to use:
+	//
+	// import (
+	//     z "github.com/Oudwins/zog"
+	//     "github.com/hemant-mann/lumora-go/middleware/usejsonbody"
+	// )
+	//
+	// var createUserSchema = z.Struct(z.Shape{
+	//     "name":  z.String().Min(3).Max(50),
+	//     "email": z.String().Email(),
+	//     "age":   z.Int().GT(0).LT(150).Optional(),
+	// })
+	//
+	// app.Post("/users/validated",
+	//     func(ctx core.Context) error {
+	//         // Get validated body from context
+	//         user := usejsonbody.GetJsonBody(ctx).(*User)
+	//
+	//         resp := core.NewResponse().
+	//             WithStatus(201).
+	//             WithBody(map[string]interface{}{
+	//                 "message": "User created and validated",
+	//                 "user":    user,
+	//             })
+	//         return resp.Send(ctx)
+	//     },
+	//     usejsonbody.UseJsonBody(createUserSchema, &User{}),
+	// )
+
 	// Example with plain text response
 	app.Get("/text", func(ctx core.Context) error {
 		resp := core.NewResponse().
