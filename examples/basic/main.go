@@ -1,11 +1,13 @@
 package main
 
 import (
+	z "github.com/Oudwins/zog"
 	"github.com/hemant-mann/lumora-go/adapters/nethttp"
 	"github.com/hemant-mann/lumora-go/core"
 	"github.com/hemant-mann/lumora-go/middleware/cors"
 	"github.com/hemant-mann/lumora-go/middleware/errorhandler"
 	"github.com/hemant-mann/lumora-go/middleware/logging"
+	"github.com/hemant-mann/lumora-go/middleware/usejsonbody"
 	"github.com/hemant-mann/lumora-go/middleware/useservices"
 )
 
@@ -44,6 +46,12 @@ func NewAuthService() *AuthService {
 
 func (s *AuthService) ValidateToken(token string) bool {
 	return s.tokens[token]
+}
+
+type User struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Age   int    `json:"age"`
 }
 
 func main() {
@@ -139,62 +147,27 @@ func main() {
 		}),
 	)
 
+	var userSchema = z.Struct(z.Shape{
+		"name":  z.String().Min(3).Max(50),
+		"email": z.String().Email(),
+		"age":   z.Int().GT(0).LT(150).Optional(),
+	})
+
 	// Using UseService helper for single service
 	app.Post("/users",
 		func(ctx core.Context) error {
-			var user struct {
-				Name  string `json:"name"`
-				Email string `json:"email"`
-			}
-
-			if err := ctx.BindJSON(&user); err != nil {
-				resp := core.NewResponse().
-					WithStatus(400).
-					WithBody(map[string]string{"error": "Invalid JSON"})
-				return resp.Send(ctx)
-			}
-
+			user := usejsonbody.GetJsonBody(ctx).(*User)
 			resp := core.NewResponse().
 				WithStatus(201).
-				WithBody(map[string]interface{}{
+				WithBody(map[string]any{
 					"message": "User created",
 					"user":    user,
 				})
 			return resp.Send(ctx)
 		},
 		useservices.UseService("userService", NewUserService()),
+		usejsonbody.UseJsonBody(userSchema, &User{}),
 	)
-
-	// Example with useJsonBody middleware (similar to Lumora JS)
-	// Note: This requires importing zog and usejsonbody packages
-	// Uncomment to use:
-	//
-	// import (
-	//     z "github.com/Oudwins/zog"
-	//     "github.com/hemant-mann/lumora-go/middleware/usejsonbody"
-	// )
-	//
-	// var createUserSchema = z.Struct(z.Shape{
-	//     "name":  z.String().Min(3).Max(50),
-	//     "email": z.String().Email(),
-	//     "age":   z.Int().GT(0).LT(150).Optional(),
-	// })
-	//
-	// app.Post("/users/validated",
-	//     func(ctx core.Context) error {
-	//         // Get validated body from context
-	//         user := usejsonbody.GetJsonBody(ctx).(*User)
-	//
-	//         resp := core.NewResponse().
-	//             WithStatus(201).
-	//             WithBody(map[string]interface{}{
-	//                 "message": "User created and validated",
-	//                 "user":    user,
-	//             })
-	//         return resp.Send(ctx)
-	//     },
-	//     usejsonbody.UseJsonBody(createUserSchema, &User{}),
-	// )
 
 	// Example with plain text response
 	app.Get("/text", func(ctx core.Context) error {

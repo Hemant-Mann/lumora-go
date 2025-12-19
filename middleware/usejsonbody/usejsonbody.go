@@ -31,6 +31,10 @@ func UseJsonBody(schema SchemaWithParse, dest interface{}) core.Middleware {
 			}
 			defer req.Body.Close()
 
+			if len(body) == 0 {
+				return core.NewError(400, "Request body is empty")
+			}
+
 			// Decode and validate JSON using zjson
 			issues := schema.Parse(zjson.Decode(bytes.NewReader(body)), dest)
 			if len(issues) > 0 {
@@ -75,7 +79,7 @@ func UseJsonBodyWithKey(schema SchemaWithParse, dest interface{}, key string) co
 }
 
 // GetJsonBody retrieves the parsed JSON body from context
-func GetJsonBody(ctx core.Context) interface{} {
+func GetJsonBody(ctx core.Context) any {
 	if body, ok := ctx.Get("_jsonBody"); ok {
 		return body
 	}
