@@ -37,7 +37,9 @@ func (a *App) Handle(method, path string, handler core.Handler, middlewares ...c
 			ctx := NewContext(ginCtx, a.services)
 			// Set app-level services in context for UseServices middleware
 			ctx.Set("_app_services", a.services)
-			if err := finalHandler(ctx); err != nil {
+			// Orchestrator handles response and error
+			resp, err := finalHandler(ctx)
+			if err := core.HandleResponse(ctx, resp, err); err != nil {
 				// Error will be handled by error middleware if present
 				ginCtx.Error(err)
 			}

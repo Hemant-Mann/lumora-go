@@ -1,7 +1,8 @@
 package core
 
 // Handler is the main handler function type
-type Handler func(Context) error
+// Returns a Response and an error. The orchestrator will handle sending the response.
+type Handler func(Context) (*Response, error)
 
 // Middleware is a function that wraps a handler
 type Middleware func(Handler) Handler

@@ -35,14 +35,14 @@ func New(options *Options) core.Middleware {
 	}
 	
 	return func(next core.Handler) core.Handler {
-		return func(ctx core.Context) error {
+		return func(ctx core.Context) (*core.Response, error) {
 			origin := ctx.Header("Origin")
 			
 			// Handle preflight request
 			if ctx.Request().Method == "OPTIONS" {
 				setCORSHeaders(ctx, options, origin)
-				ctx.Status(204)
-				return nil
+				resp := core.NewResponse().WithStatus(204)
+				return resp, nil
 			}
 			
 			// Set CORS headers for actual request

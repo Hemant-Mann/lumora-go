@@ -52,16 +52,16 @@ func main() {
 	app.Services().Register("userService", NewUserService())
 	
 	// Define routes
-	app.Get("/", func(ctx core.Context) error {
+	app.Get("/", func(ctx core.Context) (*core.Response, error) {
 		resp := core.NewResponse().
 			WithStatus(200).
 			WithBody(map[string]string{
 				"message": "Hello, World!",
 			})
-		return resp.Send(ctx)
+		return resp, nil
 	})
 	
-	app.Get("/users/:id", func(ctx core.Context) error {
+	app.Get("/users/:id", func(ctx core.Context) (*core.Response, error) {
 		id := ctx.Param("id")
 		
 		// Access service
@@ -72,7 +72,7 @@ func main() {
 			WithBody(map[string]string{
 				"id": id,
 			})
-		return resp.Send(ctx)
+		return resp, nil
 	})
 	
 	app.Start(":8080")
@@ -101,13 +101,13 @@ func main() {
 		errorhandler.Simple(),
 	)
 	
-	app.Get("/", func(ctx core.Context) error {
+	app.Get("/", func(ctx core.Context) (*core.Response, error) {
 		resp := core.NewResponse().
 			WithStatus(200).
 			WithBody(map[string]string{
 				"message": "Hello from Gin!",
 			})
-		return resp.Send(ctx)
+		return resp, nil
 	})
 	
 	app.Start(":8080")
@@ -136,13 +136,13 @@ func main() {
 		errorhandler.Simple(),
 	)
 	
-	app.Get("/", func(ctx core.Context) error {
+	app.Get("/", func(ctx core.Context) (*core.Response, error) {
 		resp := core.NewResponse().
 			WithStatus(200).
 			WithBody(map[string]string{
 				"message": "Hello from FastHTTP!",
 			})
-		return resp.Send(ctx)
+		return resp, nil
 	})
 	
 	app.Start(":8080")
@@ -155,7 +155,7 @@ func main() {
 
 The `core` package defines framework-agnostic interfaces:
 - `Context`: Request/response context abstraction
-- `Handler`: Handler function type
+- `Handler`: Handler function type `func(Context) (*Response, error)`
 - `Middleware`: Middleware function type
 - `App`: Application interface
 
@@ -209,15 +209,15 @@ err := core.NewError(404, "Not Found")
 // Wrap an existing error
 err := core.WrapError(500, "Internal Server Error", originalErr)
 
-// In your handler
+// In your handler - return error as second value
 if someCondition {
-	return core.NewError(400, "Bad Request")
+	return nil, core.NewError(400, "Bad Request")
 }
 ```
 
 ## Response System
 
-The response system gives you full control over your response structure:
+The response system gives you full control over your response structure. Handlers return `(*Response, error)` instead of sending responses directly. The orchestrator handles sending the response automatically.
 
 ```go
 // Create a response with full control
@@ -234,7 +234,7 @@ resp := core.NewResponse().
 		"message": "Success",
 		"data":    yourData,
 	})
-return resp.Send(ctx)
+return resp, nil  // Orchestrator will send the response
 ```
 
 ### Automatic Content-Type Detection
@@ -300,11 +300,14 @@ import "github.com/hemant-mann/lumora-go/middleware/useservices"
 
 // Route with route-specific services
 app.Get("/users/:id",
-	func(ctx core.Context) error {
+	func(ctx core.Context) (*core.Response, error) {
 		// Access route-specific service
 		userService := ctx.MustService("userService").(*UserService)
 		// ... use the service
-		return resp.Send(ctx)
+		resp := core.NewResponse().
+			WithStatus(200).
+			WithBody(map[string]string{"id": "123"})
+		return resp, nil
 	},
 	useservices.UseServices(map[string]interface{}{
 		"userService": NewUserService(),
@@ -313,11 +316,14 @@ app.Get("/users/:id",
 
 // Multiple route-specific services
 app.Get("/protected/:id",
-	func(ctx core.Context) error {
+	func(ctx core.Context) (*core.Response, error) {
 		userService := ctx.MustService("userService").(*UserService)
 		authService := ctx.MustService("authService").(*AuthService)
 		// ... use services
-		return resp.Send(ctx)
+		resp := core.NewResponse().
+			WithStatus(200).
+			WithBody(map[string]string{"message": "Protected"})
+		return resp, nil
 	},
 	useservices.UseServices(map[string]interface{}{
 		"userService": NewUserService(),
@@ -327,8 +333,10 @@ app.Get("/protected/:id",
 
 // Single service helper
 app.Post("/users",
-	func(ctx core.Context) error {
+	func(ctx core.Context) (*core.Response, error) {
 		// ... handler code
+		resp := core.NewResponse().WithStatus(201)
+		return resp, nil
 	},
 	useservices.UseService("userService", NewUserService()),
 )
@@ -351,7 +359,7 @@ This allows you to:
 // Get service (returns error if not found)
 userService, err := ctx.Service("userService")
 if err != nil {
-	return core.NewError(500, "Service unavailable")
+	return nil, core.NewError(500, "Service unavailable")
 }
 us := userService.(*UserService)
 
@@ -385,7 +393,7 @@ type User struct {
 
 // Use in route
 app.Post("/users",
-    func(ctx core.Context) error {
+    func(ctx core.Context) (*core.Response, error) {
         // Get parsed and validated body
         user := usejsonbody.GetJsonBody(ctx).(*User)
         
@@ -396,7 +404,7 @@ app.Post("/users",
                 "message": "User created",
                 "user":    user,
             })
-        return resp.Send(ctx)
+        return resp, nil
     },
     usejsonbody.UseJsonBody(userSchema, &User{}),
 )
@@ -411,8 +419,10 @@ app.Post("/users",
 The middleware:
 - Parses JSON from request body
 - Validates against zog schema
-- Returns 400 error if validation fails
+- Returns 400 error response if validation fails
 - Stores validated data in context for handler access
+
+**Note**: Handlers return `(*Response, error)` instead of calling `resp.Send(ctx)`. The orchestrator automatically sends the response. If an error is returned, it's handled by the error middleware.
 
 ## License
 

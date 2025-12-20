@@ -6,8 +6,8 @@ import (
 
 // Options represents error handler configuration options
 type Options struct {
-	// Handler is a custom error handler function
-	Handler func(ctx core.Context, err error) error
+	// Handler is a custom error handler function that returns a Response
+	Handler func(ctx core.Context, err error) (*core.Response, error)
 	// LogErrors determines if errors should be logged
 	LogErrors bool
 }
@@ -27,34 +27,34 @@ func New(options *Options) core.Middleware {
 	}
 	
 	return func(next core.Handler) core.Handler {
-		return func(ctx core.Context) error {
-			err := next(ctx)
+		return func(ctx core.Context) (*core.Response, error) {
+			resp, err := next(ctx)
 			
 			if err != nil {
 				return options.Handler(ctx, err)
 			}
 			
-			return nil
+			return resp, nil
 		}
 	}
 }
 
 // defaultErrorHandler handles errors by checking if they're HTTP errors
-func defaultErrorHandler(ctx core.Context, err error) error {
+func defaultErrorHandler(ctx core.Context, err error) (*core.Response, error) {
 	// Check if it's an HTTP error
 	if httpErr := core.GetHTTPError(err); httpErr != nil {
-		// Send error response using new Response system
+		// Return error response
 		resp := core.NewResponse().
 			WithStatus(httpErr.Code).
 			WithBody(map[string]string{"error": httpErr.Message})
-		return resp.Send(ctx)
+		return resp, nil
 	}
 	
 	// Default to 500 Internal Server Error
 	resp := core.NewResponse().
 		WithStatus(500).
 		WithBody(map[string]string{"error": "Internal Server Error"})
-	return resp.Send(ctx)
+	return resp, nil
 }
 
 // Simple creates a simple error handler middleware with default options

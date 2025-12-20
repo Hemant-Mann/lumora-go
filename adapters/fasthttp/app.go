@@ -60,8 +60,9 @@ func (a *App) Handle(method, path string, handler core.Handler, middlewares ...c
 			ctxImpl.SetParams(params)
 		}
 		
-		// Call our core handler - errors are handled by error middleware
-		if err := finalHandler(coreCtx); err != nil {
+		// Call our core handler - orchestrator handles response and error
+		resp, handlerErr := finalHandler(coreCtx)
+		if err := core.HandleResponse(coreCtx, resp, handlerErr); err != nil {
 			// If error middleware didn't handle it, send a default error response
 			// This should rarely happen if error middleware is properly configured
 			ctx.Error(err.Error(), fasthttp.StatusInternalServerError)

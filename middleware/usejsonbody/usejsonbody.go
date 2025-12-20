@@ -20,22 +20,25 @@ type SchemaWithParse interface {
 // dest: pointer to struct that will hold the parsed data
 func UseJsonBody(schema SchemaWithParse, dest interface{}) core.Middleware {
 	return func(next core.Handler) core.Handler {
-		return func(ctx core.Context) error {
+		return func(ctx core.Context) (*core.Response, error) {
 			// Use RequestBody() method which works across all adapters
 			body, err := ctx.RequestBody()
 			if err != nil {
-				return core.NewError(400, "Failed to read request body")
+				return nil, core.NewError(400, "Failed to read request body")
 			}
 
 			if len(body) == 0 {
-				return core.NewError(400, "Request body is empty")
+				return nil, core.NewError(400, "Request body is empty")
 			}
 
 			// Decode and validate JSON using zjson
 			issues := schema.Parse(zjson.Decode(bytes.NewReader(body)), dest)
 			if len(issues) > 0 {
-				// Return validation errors
-				return core.NewError(400, formatValidationErrors(issues))
+				// Return validation error response
+				resp := core.NewResponse().
+					WithStatus(400).
+					WithBody(map[string]string{"error": formatValidationErrors(issues)})
+				return resp, nil
 			}
 
 			// Store parsed body in context for access
@@ -49,22 +52,25 @@ func UseJsonBody(schema SchemaWithParse, dest interface{}) core.Middleware {
 // UseJsonBodyWithKey creates a middleware that parses JSON and stores it with a custom key
 func UseJsonBodyWithKey(schema SchemaWithParse, dest interface{}, key string) core.Middleware {
 	return func(next core.Handler) core.Handler {
-		return func(ctx core.Context) error {
+		return func(ctx core.Context) (*core.Response, error) {
 			// Use RequestBody() method which works across all adapters
 			body, err := ctx.RequestBody()
 			if err != nil {
-				return core.NewError(400, "Failed to read request body")
+				return nil, core.NewError(400, "Failed to read request body")
 			}
 
 			if len(body) == 0 {
-				return core.NewError(400, "Request body is empty")
+				return nil, core.NewError(400, "Request body is empty")
 			}
 
 			// Decode and validate JSON using zjson
 			issues := schema.Parse(zjson.Decode(bytes.NewReader(body)), dest)
 			if len(issues) > 0 {
-				// Return validation errors
-				return core.NewError(400, formatValidationErrors(issues))
+				// Return validation error response
+				resp := core.NewResponse().
+					WithStatus(400).
+					WithBody(map[string]string{"error": formatValidationErrors(issues)})
+				return resp, nil
 			}
 
 			// Store parsed body in context with custom key

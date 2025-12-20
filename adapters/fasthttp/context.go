@@ -41,9 +41,12 @@ func (c *contextImpl) Request() *http.Request {
 		RawQuery: string(c.ctx.QueryArgs().QueryString()),
 	}
 	req.Header = make(http.Header)
-	c.ctx.Request.Header.VisitAll(func(key, value []byte) {
-		req.Header.Add(string(key), string(value))
-	})
+	allHeaders := c.ctx.Request.Header.All()
+	for key, value := range allHeaders {
+		if key != nil && value != nil {
+			req.Header.Add(string(key), string(value))
+		}
+	}
 	return req
 }
 

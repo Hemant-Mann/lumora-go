@@ -40,7 +40,7 @@ func New(options *Options) core.Middleware {
 	}
 	
 	return func(next core.Handler) core.Handler {
-		return func(ctx core.Context) error {
+		return func(ctx core.Context) (*core.Response, error) {
 			start := time.Now()
 			req := ctx.Request()
 			
@@ -48,19 +48,20 @@ func New(options *Options) core.Middleware {
 			logRequest(options, req.Method, req.URL.Path, req.RemoteAddr)
 			
 			// Execute next handler
-			err := next(ctx)
+			resp, err := next(ctx)
 			
 			// Calculate duration
 			duration := time.Since(start)
 			
 			// Log response
-			// Note: Status code tracking would need to be added to context
-			// For now, we'll use a default or check if status was set
 			statusCode := 200
+			if resp != nil {
+				statusCode = resp.StatusCode
+			}
 			
 			logResponse(options, req.Method, req.URL.Path, statusCode, duration, err)
 			
-			return err
+			return resp, err
 		}
 	}
 }

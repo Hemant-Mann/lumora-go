@@ -9,7 +9,7 @@ import (
 type route struct {
 	method  string
 	pattern string
-	handler core.Handler
+	handler func(core.Context) error // Wrapper that returns error for router compatibility
 }
 
 type Router struct {
@@ -22,7 +22,7 @@ func NewRouter() *Router {
 	}
 }
 
-func (r *Router) Handle(method, pattern string, handler core.Handler) {
+func (r *Router) Handle(method, pattern string, handler func(core.Context) error) {
 	r.routes = append(r.routes, &route{
 		method:  method,
 		pattern: pattern,
@@ -30,7 +30,7 @@ func (r *Router) Handle(method, pattern string, handler core.Handler) {
 	})
 }
 
-func (r *Router) Match(method, path string) (core.Handler, map[string]string) {
+func (r *Router) Match(method, path string) (func(core.Context) error, map[string]string) {
 	for _, route := range r.routes {
 		if route.method != method {
 			continue

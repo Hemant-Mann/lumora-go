@@ -9,7 +9,7 @@ import (
 // These services are available only for this route and override app-level services with the same name
 func UseServices(routeServices map[string]interface{}) core.Middleware {
 	return func(next core.Handler) core.Handler {
-		return func(ctx core.Context) error {
+		return func(ctx core.Context) (*core.Response, error) {
 			// Create a scoped service container for this route
 			scopedContainer := services.NewContainer()
 

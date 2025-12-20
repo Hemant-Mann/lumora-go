@@ -68,19 +68,19 @@ func main() {
 	)
 
 	// Define routes with route-specific services (like Lumora JS!)
-	app.Get("/", func(ctx core.Context) error {
+	app.Get("/", func(ctx core.Context) (*core.Response, error) {
 		resp := core.NewResponse().
 			WithStatus(200).
 			WithBody(map[string]interface{}{
 				"message": "Hello, World!",
 				"version": "1.0.0",
 			})
-		return resp.Send(ctx)
+		return resp, nil
 	})
 
 	// Route with route-specific services - similar to Lumora JS useServices
 	app.Get("/users/:id",
-		func(ctx core.Context) error {
+		func(ctx core.Context) (*core.Response, error) {
 			id := ctx.Param("id")
 
 			// Access route-specific service
@@ -91,7 +91,7 @@ func main() {
 				resp := core.NewResponse().
 					WithStatus(404).
 					WithBody(map[string]string{"error": "User not found"})
-				return resp.Send(ctx)
+				return resp, nil
 			}
 
 			resp := core.NewResponse().
@@ -100,7 +100,7 @@ func main() {
 					"id":   id,
 					"name": name,
 				})
-			return resp.Send(ctx)
+			return resp, nil
 		},
 		useservices.UseServices(map[string]interface{}{
 			"userService": NewUserService(),
@@ -109,7 +109,7 @@ func main() {
 
 	// Route with multiple route-specific services
 	app.Get("/protected/:id",
-		func(ctx core.Context) error {
+		func(ctx core.Context) (*core.Response, error) {
 			// Access route-specific services
 			userService := ctx.MustService("userService").(*UserService)
 			authService := ctx.MustService("authService").(*AuthService)
@@ -120,7 +120,7 @@ func main() {
 				resp := core.NewResponse().
 					WithStatus(401).
 					WithBody(map[string]string{"error": "Unauthorized"})
-				return resp.Send(ctx)
+				return resp, nil
 			}
 
 			id := ctx.Param("id")
@@ -129,7 +129,7 @@ func main() {
 				resp := core.NewResponse().
 					WithStatus(404).
 					WithBody(map[string]string{"error": "User not found"})
-				return resp.Send(ctx)
+				return resp, nil
 			}
 
 			resp := core.NewResponse().
@@ -139,7 +139,7 @@ func main() {
 					"name": name,
 					"auth": "validated",
 				})
-			return resp.Send(ctx)
+			return resp, nil
 		},
 		useservices.UseServices(map[string]interface{}{
 			"userService": NewUserService(),
@@ -155,7 +155,7 @@ func main() {
 
 	// Using UseService helper for single service
 	app.Post("/users",
-		func(ctx core.Context) error {
+		func(ctx core.Context) (*core.Response, error) {
 			user := usejsonbody.GetJsonBody(ctx).(*User)
 			resp := core.NewResponse().
 				WithStatus(201).
@@ -163,23 +163,23 @@ func main() {
 					"message": "User created",
 					"user":    user,
 				})
-			return resp.Send(ctx)
+			return resp, nil
 		},
 		useservices.UseService("userService", NewUserService()),
 		usejsonbody.UseJsonBody(userSchema, &User{}),
 	)
 
 	// Example with plain text response
-	app.Get("/text", func(ctx core.Context) error {
+	app.Get("/text", func(ctx core.Context) (*core.Response, error) {
 		resp := core.NewResponse().
 			WithStatus(200).
 			WithHeader("Content-Type", "text/plain").
 			WithBody("This is a plain text response")
-		return resp.Send(ctx)
+		return resp, nil
 	})
 
 	// Example with cookies
-	app.Get("/cookie", func(ctx core.Context) error {
+	app.Get("/cookie", func(ctx core.Context) (*core.Response, error) {
 		resp := core.NewResponse().
 			WithStatus(200).
 			WithCookie(core.Cookie{
@@ -190,11 +190,11 @@ func main() {
 				MaxAge:   3600,
 			}).
 			WithBody(map[string]string{"message": "Cookie set"})
-		return resp.Send(ctx)
+		return resp, nil
 	})
 
-	app.Get("/error", func(ctx core.Context) error {
-		return core.NewError(500, "This is an error example")
+	app.Get("/error", func(ctx core.Context) (*core.Response, error) {
+		return nil, core.NewError(500, "This is an error example")
 	})
 
 	app.Start(":8080")

@@ -36,9 +36,11 @@ func (a *App) Handle(method, path string, handler core.Handler, middlewares ...c
 	// Apply middlewares to handler
 	finalHandler := core.Apply(handler, allMiddlewares...)
 	
-	// Register with router
+	// Register with router - wrap handler to convert to router's expected signature
+	// Router expects a handler that returns error, but we need to call HandleResponse
 	a.router.Handle(method, path, func(ctx core.Context) error {
-		return finalHandler(ctx)
+		resp, err := finalHandler(ctx)
+		return core.HandleResponse(ctx, resp, err)
 	})
 }
 
@@ -86,7 +88,7 @@ func (a *App) Start(addr string) error {
 			ctxImpl.SetParams(params)
 		}
 		
-		// Execute handler
+		// Execute handler - handler returns error (orchestrator already handled response sending)
 		if err := handler(ctx); err != nil {
 			// Error handling will be done by error middleware if present
 			http.Error(res, err.Error(), http.StatusInternalServerError)

@@ -118,6 +118,19 @@ func SendResponse(ctx Context, resp *Response) error {
 	return resp.Send(ctx)
 }
 
+// HandleResponse is the orchestrator function that handles response and error
+// If error is not nil, it returns the error (to be handled by error middleware)
+// If error is nil and response is not nil, it sends the response
+func HandleResponse(ctx Context, resp *Response, err error) error {
+	if err != nil {
+		return err
+	}
+	if resp != nil {
+		return resp.Send(ctx)
+	}
+	return nil
+}
+
 // Helper functions for common response patterns
 
 // JSON sends a JSON response
