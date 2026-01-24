@@ -7,6 +7,7 @@ import (
 	"github.com/hemant-mann/lumora-go/middleware/cors"
 	"github.com/hemant-mann/lumora-go/middleware/errorhandler"
 	"github.com/hemant-mann/lumora-go/middleware/logging"
+	"github.com/hemant-mann/lumora-go/middleware/useheaders"
 	"github.com/hemant-mann/lumora-go/middleware/usejsonbody"
 	"github.com/hemant-mann/lumora-go/middleware/useservices"
 )
@@ -196,6 +197,57 @@ func main() {
 	app.Get("/error", func(ctx core.Context) (*core.Response, error) {
 		return nil, core.NewError(500, "This is an error example")
 	})
+
+	// Example with useHeaders middleware
+	type AuthHeaders struct {
+		Authorization string `json:"authorization"`
+		APIKey        string `json:"x-api-key,omitempty"`
+		ContentType   string `json:"content-type,omitempty"`
+	}
+
+	var authHeadersSchema = z.Struct(z.Shape{
+		"authorization": z.String().Min(1),
+		"x-api-key":     z.String().Optional(),
+		"content-type":  z.String().Optional(),
+	})
+
+	app.Get("/api/protected",
+		func(ctx core.Context) (*core.Response, error) {
+			// Get parsed and validated headers
+			headers := useheaders.GetHeaders(ctx).(*AuthHeaders)
+
+			resp := core.NewResponse().
+				WithStatus(200).
+				WithBody(map[string]interface{}{
+					"message": "Access granted",
+					"hasToken": headers.Authorization != "",
+					"hasApiKey": headers.APIKey != "",
+				})
+			return resp, nil
+		},
+		useheaders.UseHeaders(authHeadersSchema, &AuthHeaders{}),
+	)
+
+	// Example combining useHeaders and useJsonBody
+	app.Post("/api/users",
+		func(ctx core.Context) (*core.Response, error) {
+			// Get validated headers
+			headers := useheaders.GetHeaders(ctx).(*AuthHeaders)
+			// Get validated body
+			user := usejsonbody.GetJsonBody(ctx).(*User)
+
+			resp := core.NewResponse().
+				WithStatus(201).
+				WithBody(map[string]interface{}{
+					"message": "User created",
+					"user":    user,
+					"auth":    headers.Authorization != "",
+				})
+			return resp, nil
+		},
+		useheaders.UseHeaders(authHeadersSchema, &AuthHeaders{}),
+		usejsonbody.UseJsonBody(userSchema, &User{}),
+	)
 
 	app.Start(":8080")
 }

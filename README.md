@@ -424,6 +424,84 @@ The middleware:
 
 **Note**: Handlers return `(*Response, error)` instead of calling `resp.Send(ctx)`. The orchestrator automatically sends the response. If an error is returned, it's handled by the error middleware.
 
+## Header Parsing (useHeaders)
+
+Similar to Lumora JS's `useHeaders` hook, you can parse and validate request headers using the `zog` library:
+
+```go
+import (
+    z "github.com/Oudwins/zog"
+    "github.com/hemant-mann/lumora-go/middleware/useheaders"
+)
+
+// Define your schema using zog
+// Note: Header names are normalized to lowercase for schema matching
+var authHeadersSchema = z.Struct(z.Shape{
+    "authorization": z.String().Min(1),
+    "x-api-key":     z.String().Optional(),
+    "content-type":  z.String().Optional(),
+})
+
+// Define your struct
+type AuthHeaders struct {
+    Authorization string `json:"authorization"`
+    APIKey        string `json:"x-api-key,omitempty"`
+    ContentType   string `json:"content-type,omitempty"`
+}
+
+// Use in route
+app.Get("/api/protected",
+    func(ctx core.Context) (*core.Response, error) {
+        // Get parsed and validated headers
+        headers := useheaders.GetHeaders(ctx).(*AuthHeaders)
+        
+        // Use validated headers
+        resp := core.NewResponse().
+            WithStatus(200).
+            WithBody(map[string]interface{}{
+                "message": "Access granted",
+                "hasToken": headers.Authorization != "",
+            })
+        return resp, nil
+    },
+    useheaders.UseHeaders(authHeadersSchema, &AuthHeaders{}),
+)
+
+// With custom key
+app.Get("/api/protected",
+    handler,
+    useheaders.UseHeadersWithKey(authHeadersSchema, &AuthHeaders{}, "authHeaders"),
+)
+
+// Combining useHeaders with useJsonBody
+app.Post("/api/users",
+    func(ctx core.Context) (*core.Response, error) {
+        headers := useheaders.GetHeaders(ctx).(*AuthHeaders)
+        user := usejsonbody.GetJsonBody(ctx).(*User)
+        
+        resp := core.NewResponse().
+            WithStatus(201).
+            WithBody(map[string]interface{}{
+                "message": "User created",
+                "user":    user,
+                "auth":    headers.Authorization != "",
+            })
+        return resp, nil
+    },
+    useheaders.UseHeaders(authHeadersSchema, &AuthHeaders{}),
+    usejsonbody.UseJsonBody(userSchema, &User{}),
+)
+```
+
+The middleware:
+- Parses headers from request
+- Normalizes header names to lowercase for consistent matching
+- Validates against zog schema
+- Returns 400 error response if validation fails
+- Stores validated headers in context for handler access
+
+**Note**: HTTP headers are case-insensitive, so the middleware normalizes them to lowercase. Use lowercase keys in your zog schema (e.g., `"authorization"` not `"Authorization"`).
+
 ## License
 
 MIT License with exclusion clause. See [LICENSE](LICENSE) file for details.
