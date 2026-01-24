@@ -1,9 +1,12 @@
 package useheaders
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 
 	z "github.com/Oudwins/zog"
+	"github.com/Oudwins/zog/parsers/zjson"
 	"github.com/hemant-mann/lumora-go/core"
 )
 
@@ -22,7 +25,7 @@ func UseHeaders(schema SchemaWithParse, dest any) core.Middleware {
 		return func(ctx core.Context) (*core.Response, error) {
 			// Extract headers from request
 			req := ctx.Request()
-			headers := make(map[string]any)
+			headers := make(map[string]string)
 
 			// Convert headers to map for zog parsing
 			// Normalize header names to lowercase for consistent matching
@@ -35,8 +38,13 @@ func UseHeaders(schema SchemaWithParse, dest any) core.Middleware {
 				}
 			}
 
+			jsonBody, err := json.Marshal(headers)
+			if err != nil {
+				return nil, core.NewError(400, "Failed to marshal headers to JSON")
+			}
+
 			// Validate headers using zog schema
-			issues := schema.Parse(headers, dest)
+			issues := schema.Parse(zjson.Decode(bytes.NewReader(jsonBody)), dest)
 			if len(issues) > 0 {
 				// Return validation error response
 				resp := core.NewResponse().
@@ -71,9 +79,13 @@ func UseHeadersWithKey(schema SchemaWithParse, dest any, key string) core.Middle
 					headers[normalizedName] = values[0]
 				}
 			}
+			jsonBody, err := json.Marshal(headers)
+			if err != nil {
+				return nil, core.NewError(400, "Failed to marshal headers to JSON")
+			}
 
 			// Validate headers using zog schema
-			issues := schema.Parse(headers, dest)
+			issues := schema.Parse(zjson.Decode(bytes.NewReader(jsonBody)), dest)
 			if len(issues) > 0 {
 				// Return validation error response
 				resp := core.NewResponse().

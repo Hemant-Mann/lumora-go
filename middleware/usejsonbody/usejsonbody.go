@@ -18,7 +18,7 @@ type SchemaWithParse interface {
 // Similar to Lumora JS useJsonBody hook
 // schema: zog schema for validation (e.g., z.Struct(z.Shape{...}))
 // dest: pointer to struct that will hold the parsed data
-func UseJsonBody(schema SchemaWithParse, dest interface{}) core.Middleware {
+func UseJsonBody(schema SchemaWithParse, dest any) core.Middleware {
 	return func(next core.Handler) core.Handler {
 		return func(ctx core.Context) (*core.Response, error) {
 			// Use RequestBody() method which works across all adapters
@@ -50,7 +50,7 @@ func UseJsonBody(schema SchemaWithParse, dest interface{}) core.Middleware {
 }
 
 // UseJsonBodyWithKey creates a middleware that parses JSON and stores it with a custom key
-func UseJsonBodyWithKey(schema SchemaWithParse, dest interface{}, key string) core.Middleware {
+func UseJsonBodyWithKey(schema SchemaWithParse, dest any, key string) core.Middleware {
 	return func(next core.Handler) core.Handler {
 		return func(ctx core.Context) (*core.Response, error) {
 			// Use RequestBody() method which works across all adapters

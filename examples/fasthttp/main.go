@@ -201,12 +201,12 @@ func main() {
 	// Example with useHeaders middleware
 	type AuthHeaders struct {
 		Authorization string `json:"authorization"`
-		APIKey        string `json:"x-api-key,omitempty"`
+		ApiKey        string `json:"x-api-key"`
 	}
 
 	var authHeadersSchema = z.Struct(z.Shape{
-		"authorization": z.String().Min(1),
-		"x-api-key":     z.String().Optional(),
+		"authorization": z.String().Min(10, z.Message("Authorization is atleast 10 characters")).Required(z.Message("Authorization is required")),
+		"apiKey":        z.String().Optional(),
 	})
 
 	app.Get("/api/protected",
