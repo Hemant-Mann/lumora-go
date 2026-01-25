@@ -81,6 +81,10 @@ func UseJsonBodyWithKey(schema SchemaWithParse, dest any, key string) core.Middl
 	}
 }
 
+func SetJsonBody(ctx core.Context, dest any) {
+	ctx.Set("_jsonBody", dest)
+}
+
 // GetJsonBody retrieves the parsed JSON body from context
 func GetJsonBody(ctx core.Context) any {
 	if body, ok := ctx.Get("_jsonBody"); ok {
