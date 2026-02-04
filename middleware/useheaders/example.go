@@ -32,7 +32,7 @@ package useheaders
 //         // Use validated headers
 //         resp := core.NewResponse().
 //             WithStatus(200).
-//             WithBody(map[string]interface{}{
+//             WithBody(map[string]any{
 //                 "message": "Access granted",
 //                 "token":   headers.Authorization,
 //             })

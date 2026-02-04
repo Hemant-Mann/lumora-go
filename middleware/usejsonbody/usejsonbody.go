@@ -2,6 +2,7 @@ package usejsonbody
 
 import (
 	"bytes"
+	"reflect"
 
 	z "github.com/Oudwins/zog"
 	"github.com/Oudwins/zog/parsers/zjson"
@@ -14,13 +15,25 @@ type SchemaWithParse interface {
 	Parse(data any, destPtr any, options ...z.ExecOption) z.ZogIssueList
 }
 
+// newDest allocates a new instance of the same type as dest (dest must be a pointer to struct).
+// Used per-request to avoid race when parsing JSON into a shared pointer.
+func newDest(dest any) any {
+	t := reflect.TypeOf(dest)
+	if t == nil || t.Kind() != reflect.Ptr {
+		return dest
+	}
+	return reflect.New(t.Elem()).Interface()
+}
+
 // UseJsonBody creates a middleware that parses and validates JSON request body
 // Similar to Lumora JS useJsonBody hook
 // schema: zog schema for validation (e.g., z.Struct(z.Shape{...}))
-// dest: pointer to struct that will hold the parsed data
+// dest: pointer to struct that will hold the parsed data (type template; a new instance is used per request)
 func UseJsonBody(schema SchemaWithParse, dest any) core.Middleware {
 	return func(next core.Handler) core.Handler {
 		return func(ctx core.Context) (*core.Response, error) {
+			// Allocate a new destination per request to avoid race when handling concurrent requests
+			perRequestDest := newDest(dest)
 			// Use RequestBody() method which works across all adapters
 			body, err := ctx.RequestBody()
 			if err != nil {
@@ -32,7 +45,7 @@ func UseJsonBody(schema SchemaWithParse, dest any) core.Middleware {
 			}
 
 			// Decode and validate JSON using zjson
-			issues := schema.Parse(zjson.Decode(bytes.NewReader(body)), dest)
+			issues := schema.Parse(zjson.Decode(bytes.NewReader(body)), perRequestDest)
 			if len(issues) > 0 {
 				// Return validation error response
 				resp := core.NewResponse().
@@ -42,7 +55,7 @@ func UseJsonBody(schema SchemaWithParse, dest any) core.Middleware {
 			}
 
 			// Store parsed body in context for access
-			ctx.Set("_jsonBody", dest)
+			ctx.Set("_jsonBody", perRequestDest)
 
 			return next(ctx)
 		}
@@ -53,6 +66,8 @@ func UseJsonBody(schema SchemaWithParse, dest any) core.Middleware {
 func UseJsonBodyWithKey(schema SchemaWithParse, dest any, key string) core.Middleware {
 	return func(next core.Handler) core.Handler {
 		return func(ctx core.Context) (*core.Response, error) {
+			// Allocate a new destination per request to avoid race when handling concurrent requests
+			perRequestDest := newDest(dest)
 			// Use RequestBody() method which works across all adapters
 			body, err := ctx.RequestBody()
 			if err != nil {
@@ -64,7 +79,7 @@ func UseJsonBodyWithKey(schema SchemaWithParse, dest any, key string) core.Middl
 			}
 
 			// Decode and validate JSON using zjson
-			issues := schema.Parse(zjson.Decode(bytes.NewReader(body)), dest)
+			issues := schema.Parse(zjson.Decode(bytes.NewReader(body)), perRequestDest)
 			if len(issues) > 0 {
 				// Return validation error response
 				resp := core.NewResponse().
@@ -74,7 +89,7 @@ func UseJsonBodyWithKey(schema SchemaWithParse, dest any, key string) core.Middl
 			}
 
 			// Store parsed body in context with custom key
-			ctx.Set(key, dest)
+			ctx.Set(key, perRequestDest)
 
 			return next(ctx)
 		}

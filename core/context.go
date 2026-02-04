@@ -14,10 +14,10 @@ type Context interface {
 	Response() http.ResponseWriter
 
 	// Get retrieves a value from the context
-	Get(key string) (interface{}, bool)
+	Get(key string) (any, bool)
 
 	// Set stores a value in the context
-	Set(key string, value interface{})
+	Set(key string, value any)
 
 	// Param returns a path parameter by name
 	Param(name string) string
@@ -35,13 +35,13 @@ type Context interface {
 	Status(code int)
 
 	// JSON sends a JSON response
-	JSON(code int, data interface{}) error
+	JSON(code int, data any) error
 
 	// String sends a text response
-	String(code int, format string, values ...interface{}) error
+	String(code int, format string, values ...any) error
 
 	// BindJSON binds the request body to a struct
-	BindJSON(dest interface{}) error
+	BindJSON(dest any) error
 
 	// Context returns the underlying context.Context
 	Context() context.Context
@@ -50,10 +50,10 @@ type Context interface {
 	WithContext(ctx context.Context) Context
 
 	// Service retrieves a service from the service container
-	Service(name string) (interface{}, error)
+	Service(name string) (any, error)
 
 	// MustService retrieves a service from the service container, panics if not found
-	MustService(name string) interface{}
+	MustService(name string) any
 
 	// RequestBody returns the raw request body as bytes
 	RequestBody() ([]byte, error)

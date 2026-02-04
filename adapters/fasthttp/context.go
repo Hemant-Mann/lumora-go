@@ -16,7 +16,7 @@ import (
 type contextImpl struct {
 	ctx      *fasthttp.RequestCtx
 	params   map[string]string
-	values   map[string]interface{}
+	values   map[string]any
 	reqCtx   context.Context
 	services *services.Container
 }
@@ -26,7 +26,7 @@ func NewContext(ctx *fasthttp.RequestCtx, svcs *services.Container) core.Context
 	return &contextImpl{
 		ctx:      ctx,
 		params:   make(map[string]string),
-		values:   make(map[string]interface{}),
+		values:   make(map[string]any),
 		reqCtx:   context.Background(),
 		services: svcs,
 	}
@@ -55,12 +55,12 @@ func (c *contextImpl) Response() http.ResponseWriter {
 	return &responseWriter{ctx: c.ctx}
 }
 
-func (c *contextImpl) Get(key string) (interface{}, bool) {
+func (c *contextImpl) Get(key string) (any, bool) {
 	val, ok := c.values[key]
 	return val, ok
 }
 
-func (c *contextImpl) Set(key string, value interface{}) {
+func (c *contextImpl) Set(key string, value any) {
 	c.values[key] = value
 }
 
@@ -84,21 +84,21 @@ func (c *contextImpl) Status(code int) {
 	c.ctx.SetStatusCode(code)
 }
 
-func (c *contextImpl) JSON(code int, data interface{}) error {
+func (c *contextImpl) JSON(code int, data any) error {
 	c.SetHeader("Content-Type", "application/json")
 	c.Status(code)
 	encoder := json.NewEncoder(c.ctx.Response.BodyWriter())
 	return encoder.Encode(data)
 }
 
-func (c *contextImpl) String(code int, format string, values ...interface{}) error {
+func (c *contextImpl) String(code int, format string, values ...any) error {
 	c.SetHeader("Content-Type", "text/plain")
 	c.Status(code)
 	_, err := fmt.Fprintf(c.ctx, format, values...)
 	return err
 }
 
-func (c *contextImpl) BindJSON(dest interface{}) error {
+func (c *contextImpl) BindJSON(dest any) error {
 	decoder := json.NewDecoder(bytes.NewReader(c.ctx.PostBody()))
 	return decoder.Decode(dest)
 }
@@ -118,7 +118,7 @@ func (c *contextImpl) WithContext(ctx context.Context) core.Context {
 	return newCtx
 }
 
-func (c *contextImpl) Service(name string) (interface{}, error) {
+func (c *contextImpl) Service(name string) (any, error) {
 	// Check for scoped services first (route-specific)
 	if scopedContainer, ok := c.values["_scoped_services"]; ok {
 		if svcs, ok := scopedContainer.(*services.Container); ok {
@@ -135,7 +135,7 @@ func (c *contextImpl) Service(name string) (interface{}, error) {
 	return c.services.Get(name)
 }
 
-func (c *contextImpl) MustService(name string) interface{} {
+func (c *contextImpl) MustService(name string) any {
 	// Check for scoped services first (route-specific)
 	if scopedContainer, ok := c.values["_scoped_services"]; ok {
 		if svcs, ok := scopedContainer.(*services.Container); ok {

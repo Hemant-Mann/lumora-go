@@ -33,7 +33,7 @@ package usejsonbody
 //         // Use validated user data
 //         resp := core.NewResponse().
 //             WithStatus(201).
-//             WithBody(map[string]interface{}{
+//             WithBody(map[string]any{
 //                 "message": "User created",
 //                 "user":    user,
 //             })

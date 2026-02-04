@@ -7,7 +7,7 @@ import (
 
 // UseServices creates a middleware that injects route-specific services into the context
 // These services are available only for this route and override app-level services with the same name
-func UseServices(routeServices map[string]interface{}) core.Middleware {
+func UseServices(routeServices map[string]any) core.Middleware {
 	return func(next core.Handler) core.Handler {
 		return func(ctx core.Context) (*core.Response, error) {
 			// Create a scoped service container for this route
@@ -34,8 +34,8 @@ func UseServices(routeServices map[string]interface{}) core.Middleware {
 }
 
 // UseService is a convenience function for a single service
-func UseService(name string, service interface{}) core.Middleware {
-	return UseServices(map[string]interface{}{name: service})
+func UseService(name string, service any) core.Middleware {
+	return UseServices(map[string]any{name: service})
 }
 
 // getAppServices extracts the app-level service container from context

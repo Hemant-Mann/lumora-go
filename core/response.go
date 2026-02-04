@@ -23,7 +23,7 @@ type Response struct {
 	StatusCode int
 	Headers    map[string]string
 	Cookies    []Cookie
-	Body       interface{}
+	Body       any
 }
 
 // NewResponse creates a new response with default values
@@ -55,7 +55,7 @@ func (r *Response) WithCookie(cookie Cookie) *Response {
 }
 
 // WithBody sets the response body
-func (r *Response) WithBody(body interface{}) *Response {
+func (r *Response) WithBody(body any) *Response {
 	r.Body = body
 	return r
 }
@@ -134,7 +134,7 @@ func HandleResponse(ctx Context, resp *Response, err error) error {
 // Helper functions for common response patterns
 
 // JSON sends a JSON response
-func JSON(ctx Context, code int, data interface{}) error {
+func JSON(ctx Context, code int, data any) error {
 	resp := NewResponse().
 		WithStatus(code).
 		WithHeader("Content-Type", "application/json").
@@ -152,7 +152,7 @@ func Text(ctx Context, code int, text string) error {
 }
 
 // String sends a formatted string response (for backward compatibility)
-func String(ctx Context, code int, format string, values ...interface{}) error {
+func String(ctx Context, code int, format string, values ...any) error {
 	text := fmt.Sprintf(format, values...)
 	return Text(ctx, code, text)
 }

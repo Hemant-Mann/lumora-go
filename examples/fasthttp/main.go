@@ -72,7 +72,7 @@ func main() {
 	app.Get("/", func(ctx core.Context) (*core.Response, error) {
 		resp := core.NewResponse().
 			WithStatus(200).
-			WithBody(map[string]interface{}{
+			WithBody(map[string]any{
 				"message": "Hello, World!",
 				"version": "1.0.0",
 			})
@@ -97,13 +97,13 @@ func main() {
 
 			resp := core.NewResponse().
 				WithStatus(200).
-				WithBody(map[string]interface{}{
+				WithBody(map[string]any{
 					"id":   id,
 					"name": name,
 				})
 			return resp, nil
 		},
-		useservices.UseServices(map[string]interface{}{
+		useservices.UseServices(map[string]any{
 			"userService": NewUserService(),
 		}),
 	)
@@ -135,14 +135,14 @@ func main() {
 
 			resp := core.NewResponse().
 				WithStatus(200).
-				WithBody(map[string]interface{}{
+				WithBody(map[string]any{
 					"id":   id,
 					"name": name,
 					"auth": "validated",
 				})
 			return resp, nil
 		},
-		useservices.UseServices(map[string]interface{}{
+		useservices.UseServices(map[string]any{
 			"userService": NewUserService(),
 			"authService": NewAuthService(), // Overrides app-level authService for this route
 		}),
@@ -214,7 +214,7 @@ func main() {
 			headers := useheaders.GetHeaders(ctx).(*AuthHeaders)
 			resp := core.NewResponse().
 				WithStatus(200).
-				WithBody(map[string]interface{}{
+				WithBody(map[string]any{
 					"message":  "Access granted via FastHTTP",
 					"hasToken": headers.Authorization != "",
 				})

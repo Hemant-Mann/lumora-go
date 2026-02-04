@@ -230,7 +230,7 @@ resp := core.NewResponse().
 		HttpOnly: true,
 		MaxAge:   3600,
 	}).
-	WithBody(map[string]interface{}{
+	WithBody(map[string]any{
 		"message": "Success",
 		"data":    yourData,
 	})
@@ -309,7 +309,7 @@ app.Get("/users/:id",
 			WithBody(map[string]string{"id": "123"})
 		return resp, nil
 	},
-	useservices.UseServices(map[string]interface{}{
+	useservices.UseServices(map[string]any{
 		"userService": NewUserService(),
 	}),
 )
@@ -325,7 +325,7 @@ app.Get("/protected/:id",
 			WithBody(map[string]string{"message": "Protected"})
 		return resp, nil
 	},
-	useservices.UseServices(map[string]interface{}{
+	useservices.UseServices(map[string]any{
 		"userService": NewUserService(),
 		"authService": NewAuthService(), // Overrides app-level service
 	}),
@@ -400,7 +400,7 @@ app.Post("/users",
         // Use validated user data
         resp := core.NewResponse().
             WithStatus(201).
-            WithBody(map[string]interface{}{
+            WithBody(map[string]any{
                 "message": "User created",
                 "user":    user,
             })
@@ -458,7 +458,7 @@ app.Get("/api/protected",
         // Use validated headers
         resp := core.NewResponse().
             WithStatus(200).
-            WithBody(map[string]interface{}{
+            WithBody(map[string]any{
                 "message": "Access granted",
                 "hasToken": headers.Authorization != "",
             })
@@ -481,7 +481,7 @@ app.Post("/api/users",
         
         resp := core.NewResponse().
             WithStatus(201).
-            WithBody(map[string]interface{}{
+            WithBody(map[string]any{
                 "message": "User created",
                 "user":    user,
                 "auth":    headers.Authorization != "",

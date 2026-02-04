@@ -7,27 +7,27 @@ import (
 
 // Container is a service container for dependency injection
 type Container struct {
-	services map[string]interface{}
+	services map[string]any
 	mu       sync.RWMutex
 }
 
 // NewContainer creates a new service container
 func NewContainer() *Container {
 	return &Container{
-		services: make(map[string]interface{}),
+		services: make(map[string]any),
 	}
 }
 
 // Register registers a service with the container
 // The service can be registered by name or by type
-func (c *Container) Register(name string, service interface{}) {
+func (c *Container) Register(name string, service any) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.services[name] = service
 }
 
 // Get retrieves a service by name
-func (c *Container) Get(name string) (interface{}, error) {
+func (c *Container) Get(name string) (any, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -40,7 +40,7 @@ func (c *Container) Get(name string) (interface{}, error) {
 }
 
 // MustGet retrieves a service by name, panics if not found
-func (c *Container) MustGet(name string) interface{} {
+func (c *Container) MustGet(name string) any {
 	service, err := c.Get(name)
 	if err != nil {
 		panic(err)
@@ -57,11 +57,11 @@ func (c *Container) Has(name string) bool {
 }
 
 // All returns all registered services
-func (c *Container) All() map[string]interface{} {
+func (c *Container) All() map[string]any {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	for k, v := range c.services {
 		result[k] = v
 	}
@@ -72,5 +72,5 @@ func (c *Container) All() map[string]interface{} {
 func (c *Container) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.services = make(map[string]interface{})
+	c.services = make(map[string]any)
 }

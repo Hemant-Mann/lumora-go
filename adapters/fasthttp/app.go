@@ -45,21 +45,21 @@ func (a *App) Handle(method, path string, handler core.Handler, middlewares ...c
 	// Register with router - create a fasthttp handler that converts context
 	a.router.Handle(method, path, func(ctx *fasthttp.RequestCtx) {
 		coreCtx := NewContext(ctx, a.services)
-		
+
 		// Set app-level services in context for UseServices middleware
 		coreCtx.Set("_app_services", a.services)
-		
+
 		// Extract path parameters from UserValues (fasthttp/router stores them here)
 		if ctxImpl, ok := coreCtx.(*contextImpl); ok {
 			params := make(map[string]string)
-			ctx.VisitUserValues(func(key []byte, value interface{}) {
+			ctx.VisitUserValues(func(key []byte, value any) {
 				if str, ok := value.(string); ok {
 					params[string(key)] = str
 				}
 			})
 			ctxImpl.SetParams(params)
 		}
-		
+
 		// Call our core handler - orchestrator handles response and error
 		resp, handlerErr := finalHandler(coreCtx)
 		if err := core.HandleResponse(coreCtx, resp, handlerErr); err != nil {

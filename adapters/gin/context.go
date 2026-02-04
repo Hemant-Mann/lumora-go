@@ -28,12 +28,12 @@ func (c *contextImpl) Response() http.ResponseWriter {
 	return c.ctx.Writer
 }
 
-func (c *contextImpl) Get(key string) (interface{}, bool) {
+func (c *contextImpl) Get(key string) (any, bool) {
 	val, ok := c.ctx.Get(key)
 	return val, ok
 }
 
-func (c *contextImpl) Set(key string, value interface{}) {
+func (c *contextImpl) Set(key string, value any) {
 	c.ctx.Set(key, value)
 }
 
@@ -57,17 +57,17 @@ func (c *contextImpl) Status(code int) {
 	c.ctx.Status(code)
 }
 
-func (c *contextImpl) JSON(code int, data interface{}) error {
+func (c *contextImpl) JSON(code int, data any) error {
 	c.ctx.JSON(code, data)
 	return nil
 }
 
-func (c *contextImpl) String(code int, format string, values ...interface{}) error {
+func (c *contextImpl) String(code int, format string, values ...any) error {
 	c.ctx.String(code, format, values...)
 	return nil
 }
 
-func (c *contextImpl) BindJSON(dest interface{}) error {
+func (c *contextImpl) BindJSON(dest any) error {
 	return c.ctx.ShouldBindJSON(dest)
 }
 
@@ -81,7 +81,7 @@ func (c *contextImpl) WithContext(ctx context.Context) core.Context {
 	return &contextImpl{ctx: newGinCtx, services: c.services}
 }
 
-func (c *contextImpl) Service(name string) (interface{}, error) {
+func (c *contextImpl) Service(name string) (any, error) {
 	// Check for scoped services first (route-specific)
 	if scopedContainer, ok := c.ctx.Get("_scoped_services"); ok {
 		if svcs, ok := scopedContainer.(*services.Container); ok {
@@ -98,7 +98,7 @@ func (c *contextImpl) Service(name string) (interface{}, error) {
 	return c.services.Get(name)
 }
 
-func (c *contextImpl) MustService(name string) interface{} {
+func (c *contextImpl) MustService(name string) any {
 	// Check for scoped services first (route-specific)
 	if scopedContainer, ok := c.ctx.Get("_scoped_services"); ok {
 		if svcs, ok := scopedContainer.(*services.Container); ok {
